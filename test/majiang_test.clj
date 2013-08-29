@@ -26,8 +26,8 @@
           turn (:current-turn hand)]
           (is (= 4 (:nb-active-players game)))
           (is (= [:east :north :west :south] (:remaining-prevalent-wind round)))
-          (is (= (- 144 (* 13 4)) (count (:wall hand))))
-          (is (= 13 (count (:east player-hands))))
+          (is (= (- (- 144 (* 13 4)) 1) (count (:wall hand))))
+          (is (= 14 (count (:east player-hands))))
           (is (= 13 (count (:north player-hands))))
           (is (= 13 (count (:west player-hands))))
           (is (= 13 (count (:south player-hands))))

@@ -79,15 +79,27 @@
       tile-move
       (recur (dec nb-tiles) (take-tile tile-move)))))
 
-(defn- initial-hands [wall]
+(defn- initial-hands-and-wall [wall]
     (reduce
      #(let [{player-hand :destination wall :source} (take-tiles {:source (:wall %1) :destination (list) :nb-tiles 13})
             current-player-hands (:player-hands %1)]
        (assoc %1, :player-hands (assoc current-player-hands %2 player-hand), :wall wall))
      {:wall wall :player-hands {}} winds))
 
+(defn- give-tile [hand to-player]
+  (let [player-hands (:player-hands hand)
+        player-hand (to-player player-hands)
+        wall (:wall hand)
+        tile-move {:source wall :destination player-hand}
+        {new-wall :source new-hand :destination} (take-tile tile-move)]
+  (assoc hand
+    :player-hands (assoc player-hands to-player new-hand)
+    :wall new-wall)))
+
 (defn- new-hand [wall]
-  (merge (->Hand (->Turn :east) nil nil) (initial-hands wall)))
+  (let [player-turn :east
+        hand-after-wall-drawn (merge (->Hand (->Turn player-turn) nil nil) (initial-hands-and-wall wall))]
+    (give-tile hand-after-wall-drawn player-turn)))
 
 (defmethod apply-event GameStarted [game event]
   (assoc game :current-round (->Round (new-hand (:wall event)) winds) ))
@@ -104,8 +116,7 @@
       (cond
        (< (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))]
        (= (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))
-                                        (->GameStarted (:aggregate-id this) (throw-dice) (throw-dice) (new-wall))
-                                       ]
+                                        (->GameStarted (:aggregate-id this) (throw-dice) (throw-dice) (new-wall))]
        :else (exception "Already 4 players"))))
 
 
