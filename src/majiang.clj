@@ -57,7 +57,8 @@
 (defrecord Game [current-round nb-active-players])
 (def empty-game (->Game nil 0))
 (defrecord Round [current-hand remaining-prevalent-wind])
-(defrecord Hand [wall player-hands])
+(defrecord Hand [current-turn wall player-hands])
+(defrecord Turn [player])
 
 ;; Events
 (defrecord PlayerJoined [aggregate-id wind])
@@ -86,7 +87,7 @@
      {:wall wall :player-hands {}} winds))
 
 (defn- new-hand [wall]
-  (merge (->Hand nil nil) (initial-hands wall)))
+  (merge (->Hand (->Turn :east) nil nil) (initial-hands wall)))
 
 (defmethod apply-event GameStarted [game event]
   (assoc game :current-round (->Round (new-hand (:wall event)) winds) ))
