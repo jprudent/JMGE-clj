@@ -45,7 +45,14 @@
 
 
 ;; Model
-(def winds [:east :south :west :north])
+(def winds [:east :north :west :south])
+(def all-tiles (flatten (conj
+                         (take 4 (repeat [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9
+                                          :c1 :c2 :c3 :c4 :c5 :c6 :c7 :c8 :c9
+                                          :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9
+                                          :we :wn :ww :ws
+                                          :dr :dg :dw]))
+                         [:fp :fo :fc :fb :ss :su :sa :sw])))
 
 (defrecord Game [current-round nb-active-players])
 (def empty-game (->Game nil 0))
@@ -54,21 +61,20 @@
 
 ;; Events
 (defrecord PlayerJoined [aggregate-id wind])
-(defrecord GameStarted [aggregate-id])
-(defrecord RoundStarted [aggregate-id])
-(defrecord HandStarted [aggregate-id dice-thown-1 dice-thrown-2 wall])
+(defrecord GameStarted [aggregate-id dice-thown-1 dice-thrown-2 wall])
 (defrecord TurnStarted [aggregate-id])
 
 (defmethod apply-event PlayerJoined [game event]
   (assoc game :nb-active-players (inc (:nb-active-players game))))
 
 (defn- take-tile [{[t & ts] :source destination :destination :as tile-move}]
-  (assoc tile-move :source ts :destination (conj t destination)))
+  {:pre [(not(nil? t))]}
+  (assoc tile-move :source ts :destination (conj destination t)))
 
 (defn- take-tiles [tile-move]
   (loop [nb-tiles (:nb-tiles tile-move)
          tile-move tile-move]
-    (if-not (nb-tiles)
+    (if (= 0 nb-tiles)
       tile-move
       (recur (dec nb-tiles) (take-tile tile-move)))))
 
@@ -79,17 +85,17 @@
        (assoc %1, :player-hands (assoc current-player-hands %2 player-hand), :wall wall))
      {:wall wall :player-hands {}} winds))
 
-(defn- new-hand []
-  (merge (->Hand nil nil) (initial-hands)))
+(defn- new-hand [wall]
+  (merge (->Hand nil nil) (initial-hands wall)))
 
 (defmethod apply-event GameStarted [game event]
-  (assoc game :current-round (->Round (new-hand) winds) ))
+  (assoc game :current-round (->Round (new-hand (:wall event)) winds) ))
 
 ;; Commands
 (defrecord NewPlayerEnter [aggregate-id])
 
-(defn- throw-dice (+1 (rand-int 6)))
-(defn- new-wall (list))
+(defn- throw-dice [] (+ 1 (rand-int 6)))
+(defn- new-wall [] all-tiles)
 
 (extend-protocol CommandHandler
   NewPlayerEnter
@@ -97,10 +103,8 @@
       (cond
        (< (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))]
        (= (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))
-                                        (->GameStarted (:aggregate-id this))
-                                        (->RoundStarted (:aggregate-id this))
-                                        (->HandStarted (:aggregate-id this) (throw-dice) (throw-dice) (new-wall))
-                                        (->TurnStarted (:aggregate-id this))]
+                                        (->GameStarted (:aggregate-id this) (throw-dice) (throw-dice) (new-wall))
+                                       ]
        :else (exception "Already 4 players"))))
 
 
@@ -114,5 +118,6 @@
         current-state (apply-events empty-game old-events)
         new-events (perform command current-state)]
     (append-events event-store (:aggregate-id command) event-stream new-events)))
+
 
 

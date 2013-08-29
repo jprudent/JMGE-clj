@@ -1,14 +1,12 @@
 (ns majiang-test
- (:use clojure.test)
- (:use majiang))
+ (:use majiang clojure.test))
 
 (def aggregate-id 11)
-
-(clear-events in-memory-event-store aggregate-id)
 
 (deftest four-people-joining
   (let [cmd-enter (->NewPlayerEnter aggregate-id)]
 
+    (clear-events in-memory-event-store aggregate-id)
     (is (= (->Game nil 0) (replay-all aggregate-id)))
 
     (handle-command cmd-enter in-memory-event-store)
@@ -21,12 +19,23 @@
     (is (= (->Game nil 3) (replay-all aggregate-id)))
 
     (handle-command cmd-enter in-memory-event-store)
-    (is (= (->Game nil 4) (replay-all aggregate-id)))
+    (let [game (replay-all aggregate-id)
+          round (:current-round game)
+          hand (:current-hand round)
+          player-hands (:player-hands hand)]
+          (is (= 4 (:nb-active-players game)))
+          (is (= [:east :north :west :south] (:remaining-prevalent-wind round)))
+          (is (= (- 144 (* 13 4)) (count (:wall hand))))
+          (is (= 13 (count (:east player-hands))))
+          (is (= 13 (count (:north player-hands))))
+          (is (= 13 (count (:west player-hands))))
+          (is (= 13 (count (:south player-hands)))))
 
     (is (thrown? Exception (handle-command cmd-enter in-memory-event-store)))))
 
 (with-test-out (run-tests))
 
-(println (+ 1 (rand-int 6)))
+(println "assert" *assert*)
+
 
 
