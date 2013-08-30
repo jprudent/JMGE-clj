@@ -58,9 +58,10 @@
 ;; Events
 ;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrecord PlayerJoined [aggregate-id wind])
+(defrecord PlayerJoined [aggregate-id])
 (defrecord GameStarted [aggregate-id dice-thown-1 dice-thrown-2 wall])
 (defrecord TileDiscarded [aggregate-id player tile])
+(defrecord Passed [aggregate-id player])
 
 ;;; PlayerJoined
 
@@ -106,12 +107,18 @@
         player-tiles (get-player-tiles game player)
         player-discarded (player (:discarded (get-hand game)))
         tile-move {:source player-tiles :destination player-discarded}
-        {new-player-discarded :destination new-player-tiles :source} (move-tile tile-move)]
+        {new-player-discarded :destination new-player-tiles :source} (move-tile tile-move)
+        new-player-states (reduce #(assoc %1 %2 (if (= player %2) :wait-next-turn :auction)) {} winds)]
     (assoc-in
       (assoc-in
         (assoc-in game [:current-round :current-hand :discarded player] new-player-discarded)
         [:current-round :current-hand :player-hands player] new-player-tiles)
-      [:current-round :current-hand :current-turn :player-states player] :wait-next-turn)))
+      [:current-round :current-hand :current-turn :player-states] new-player-states)))
+
+;;; Passed
+
+(defmethod apply-event Passed [game {player :player}]
+  (assoc-in game [:current-round :current-hand :current-turn :player-states player] :wait-next-turn))
 
 ;;;;;;;;;;;;;;;;;;
 ;; Commands
@@ -119,6 +126,7 @@
 
 (defrecord NewPlayerEnter [aggregate-id])
 (defrecord DiscardTile [aggregate-id player tile])
+(defrecord Pass [aggregate-id player])
 
 (defn- throw-dice [] (+ 1 (rand-int 6)))
 (defn- new-wall [] all-tiles) ;todo shuffle
@@ -126,24 +134,29 @@
 (extend-protocol CommandHandler
 
   NewPlayerEnter
-  (perform [this game]
+  (perform [{aggregate-id :aggregate-id} game]
     (cond
-      (< (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))]
-      (= (:nb-active-players game) 3) [(->PlayerJoined (:aggregate-id this) (:nb-active-players game))
-                                       (->GameStarted (:aggregate-id this) (throw-dice) (throw-dice) (new-wall))]
+      (< (:nb-active-players game) 3) [(->PlayerJoined aggregate-id )]
+      (= (:nb-active-players game) 3) [(->PlayerJoined aggregate-id)
+                                       (->GameStarted aggregate-id (throw-dice) (throw-dice) (new-wall))]
       :else (exception "Already 4 players")))
 
   DiscardTile
-  (perform [this game]
+  (perform [{aggregate-id :aggregate-id player :player tile :tile} game]
     (if
       (and
-        (= (:player this) (get-player-turn game))
-        (tile-owned? game (:player this) (:tile this))
-        (can-play? game (:player this))
+        (= player (get-player-turn game))
+        (tile-owned? game player tile)
+        (can-play? game player)
        )
-      [(->TileDiscarded (:aggregate-id this) (:player this) (:tile this))]
-      (exception "Not player turn or the tile doesn't belong to player"))))
+      [(->TileDiscarded aggregate-id player tile)]
+      (exception "Not player turn or the tile doesn't belong to player")))
 
+  Pass
+  (perform [{aggregate-id :aggregate-id player :player} game]
+    (if (= :auction (get-player-state game player))
+      [(->Passed aggregate-id player)]
+      (exception "Player can't make auction for discarded tile"))))
 
 
 (defn handle-command
@@ -154,6 +167,7 @@
         current-state (apply-events empty-game old-events)
         new-events (perform command current-state)]
     (append-events event-store (:aggregate-id command) event-stream new-events)))
+
 
 
 

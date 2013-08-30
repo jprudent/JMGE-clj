@@ -43,10 +43,10 @@
   (let [some-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         wished-east-tiles (conj some-tiles :fp )
         crooked-wall (into wished-east-tiles (minus all-tiles wished-east-tiles))
-        events [(->PlayerJoined aggregate-id :east )
-                (->PlayerJoined aggregate-id :north )
-                (->PlayerJoined aggregate-id :west )
-                (->PlayerJoined aggregate-id :south )
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
                 (->GameStarted aggregate-id 6 6 crooked-wall)]]
 
     (clear-events in-memory-event-store aggregate-id)
@@ -74,7 +74,35 @@
 
 
 
+(deftest auction-pass
+  (let [some-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
+        wished-east-tiles (conj some-tiles :fp )
+        crooked-wall (into wished-east-tiles (minus all-tiles wished-east-tiles))
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 crooked-wall)
+                (->TileDiscarded aggregate-id :east :b1)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+    (replay-all aggregate-id)
+    ; player who discarded can not pass
+    (is (thrown? Exception (handle-command (->Pass :east ) in-memory-event-store)))
+
+    ; other players can pass
+    (handle-command (->Pass aggregate-id :north) in-memory-event-store))
+    ; but only once
+    (is (thrown? Exception (handle-command (->Pass :north ) in-memory-event-store)))
+
+    (let [game (replay-all aggregate-id)]
+      (= (is (get-player-state game :north) :wait-next-turn))))
+
+
 (with-test-out (run-tests))
+
+
 
 
 
