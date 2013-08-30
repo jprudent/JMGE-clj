@@ -1,5 +1,9 @@
 (ns majiang-test
- (:use majiang clojure.test))
+  (:use majiang clojure.test))
+
+(defn replay-all [aggregate-id]
+  "Replay all events returning the resulting aggregate"
+  (apply-events empty-game (flatten (:transactions (retrieve-event-stream in-memory-event-store aggregate-id)))))
 
 (def aggregate-id 11)
 
@@ -24,19 +28,55 @@
           hand (:current-hand round)
           player-hands (:player-hands hand)
           turn (:current-turn hand)]
-          (is (= 4 (:nb-active-players game)))
-          (is (= [:east :north :west :south] (:remaining-prevalent-wind round)))
-          (is (= (- (- 144 (* 13 4)) 1) (count (:wall hand))))
-          (is (= 14 (count (:east player-hands))))
-          (is (= 13 (count (:north player-hands))))
-          (is (= 13 (count (:west player-hands))))
-          (is (= 13 (count (:south player-hands))))
-          (is (= :east (:player turn))))
+      (is (= 4 (:nb-active-players game)))
+      (is (= [:east :north :west :south ] (:remaining-prevalent-wind round)))
+      (is (= (- (- 144 (* 13 4)) 1) (count (:wall hand))))
+      (is (= 14 (count (:east player-hands))))
+      (is (= 13 (count (:north player-hands))))
+      (is (= 13 (count (:west player-hands))))
+      (is (= 13 (count (:south player-hands))))
+      (is (= :east (:player turn))))
+
     (is (thrown? Exception (handle-command cmd-enter in-memory-event-store)))))
+
+(deftest player-turn
+  (let [some-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
+        wished-east-tiles (conj some-tiles :fp )
+        crooked-wall (into wished-east-tiles (minus all-tiles wished-east-tiles))
+        events [(->PlayerJoined aggregate-id :east )
+                (->PlayerJoined aggregate-id :north )
+                (->PlayerJoined aggregate-id :west )
+                (->PlayerJoined aggregate-id :south )
+                (->GameStarted aggregate-id 6 6 crooked-wall)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+
+    (let [game (replay-all aggregate-id)
+          mk-discard-cmd #(->DiscardTile %1 (first (get-player-tiles game %1)))]
+      ;only current player can discard
+      (is (thrown? Exception (handle-command (mk-discard-cmd :north ) in-memory-event-store)))
+      (is (thrown? Exception (handle-command (mk-discard-cmd :west ) in-memory-event-store)))
+      (is (thrown? Exception (handle-command (mk-discard-cmd :south ) in-memory-event-store)))
+
+      ;can discard only tiles owned
+      (is (thrown? Exception (handle-command (->DiscardTile :east :c5 ) in-memory-event-store))))
+
+    (handle-command (->DiscardTile aggregate-id :east :b1 ) in-memory-event-store)
+    (let [game (replay-all aggregate-id)]
+      (is (= [:b1 ] (:east (:discarded (get-hand game)))))
+      (is (not (tile-owned? game :east :b1 )))
+      (is (= 13 (count (get-player-tiles game :east ))))
+
+      ;can't discard twice
+      (println (get-player-tiles game :east) (get-player-turn game))) ))
+    ;(handle-command (->DiscardTile aggregate-id :east :b2 ) in-memory-event-store)))
+
+
 
 (with-test-out (run-tests))
 
-(println "assert" *assert*)
+
 
 
 
