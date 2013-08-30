@@ -39,19 +39,20 @@
 (def empty-game (->Game nil 0))
 (defrecord Round [current-hand remaining-prevalent-wind])
 (defrecord Hand [current-turn wall player-hands discarded])
-(defrecord Turn [player])
+(defrecord Turn [player player-states])
 (defn init-hand [player-turn]
-  (->Hand (->Turn player-turn) nil nil {:east [] :north [] :west [] :south []}))
+  (->Hand (->Turn player-turn {}) nil nil {:east [] :north [] :west [] :south []}))
 
 ; various accessors
 (defn get-hand [game] (:current-hand (:current-round game)))
 (defn get-turn [game] (:current-turn (get-hand game)))
 (defn get-player-tiles [game player] (player (:player-hands (get-hand game))))
+(defn get-player-state [game player] (get-in (get-turn game) [:player-states player]))
 (defn get-player-turn [game] (:player (get-turn game)))
-;(defn get-player-turn-tiles [game] (get-player-tiles game (get-player-turn game)))
 
 ; various tests
 (defn tile-owned? [game player tile] (some #(= % tile) (get-player-tiles game player)))
+(defn can-play? [game player] (not (= :wait-next-turn (get-player-state game player))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
@@ -87,10 +88,9 @@
         player-hand (to-player player-hands)
         wall (:wall hand)
         tile-move {:source wall :destination player-hand}
-        {new-wall :source new-hand :destination} (move-tile tile-move)]
-    (assoc hand
-      :player-hands (assoc player-hands to-player new-hand)
-      :wall new-wall)))
+        {new-wall :source new-hand :destination} (move-tile tile-move)
+        hand-with-updated-wall (assoc hand :wall new-wall)]
+    (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
 
 (defn- new-hand [wall]
   (let [player-turn :east hand-after-wall-drawn (merge (init-hand player-turn) (initial-hands-and-wall wall))]
@@ -107,10 +107,11 @@
         player-discarded (player (:discarded (get-hand game)))
         tile-move {:source player-tiles :destination player-discarded}
         {new-player-discarded :destination new-player-tiles :source} (move-tile tile-move)]
-    (merge game ;fixme this won't do a deep merge!
-      {:current-round {:current-hand {:discarded {player new-player-discarded}
-                                      :player-hands {player new-player-tiles}
-                                      }}})))
+    (assoc-in
+      (assoc-in
+        (assoc-in game [:current-round :current-hand :discarded player] new-player-discarded)
+        [:current-round :current-hand :player-hands player] new-player-tiles)
+      [:current-round :current-hand :current-turn :player-states player] :wait-next-turn)))
 
 ;;;;;;;;;;;;;;;;;;
 ;; Commands
@@ -137,7 +138,9 @@
     (if
       (and
         (= (:player this) (get-player-turn game))
-        (tile-owned? game (:player this) (:tile this)))
+        (tile-owned? game (:player this) (:tile this))
+        (can-play? game (:player this))
+       )
       [(->TileDiscarded (:aggregate-id this) (:player this) (:tile this))]
       (exception "Not player turn or the tile doesn't belong to player"))))
 
@@ -151,6 +154,8 @@
         current-state (apply-events empty-game old-events)
         new-events (perform command current-state)]
     (append-events event-store (:aggregate-id command) event-stream new-events)))
+
+
 
 
 

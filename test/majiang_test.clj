@@ -67,14 +67,15 @@
       (is (= [:b1 ] (:east (:discarded (get-hand game)))))
       (is (not (tile-owned? game :east :b1 )))
       (is (= 13 (count (get-player-tiles game :east ))))
+      (is (= :wait-next-turn (get-player-state game :east))))
 
-      ;can't discard twice
-      (println (get-player-tiles game :east) (get-player-turn game))) ))
-    ;(handle-command (->DiscardTile aggregate-id :east :b2 ) in-memory-event-store)))
+    ;can't discard twice
+    (is (thrown? Exception (handle-command (->DiscardTile aggregate-id :east :b2 ) in-memory-event-store)))))
 
 
 
 (with-test-out (run-tests))
+
 
 
 
