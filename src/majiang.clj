@@ -153,17 +153,9 @@
 
 (defmethod apply-event Chowed
   [game {player :player owned-tiles :owned-tiles :as event}]
-  (let [fan [:chow (conj owned-tiles (get-last-discarded game))]
-        player-turn (get-player-turn game)
-        path #(into [:current-round :current-hand] %1)
-        update-fan #(update-in %1 (path [:fans player]) conj fan)
-        update-hand #(update-in %1 (path [:player-hands player-turn]) minus (vec owned-tiles))
-        update-discarded #(update-in %1 (path [:discarded player]) (fn [ts] (vec (drop-last ts))))
-        update-current-player #(assoc-in %1 (path [:current-turn :player]) player) ]
-    (update-current-player
-     (update-discarded
-      (update-hand
-       (update-fan game))))))
+  (let [path #(into  %1)
+        update-state #(assoc-in %1 [:current-round :current-hand :current-turn :player-states player] (:claimed :chow owned-tiles))]
+    (update-state game)))
 
 ;;;;;;;;;;;;;;;;;;
 ;; Commands

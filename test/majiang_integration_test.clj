@@ -136,24 +136,5 @@
     (is (thrown? Exception (handle-command (->Chow :north #{:b5 :b6}) in-memory-event-store)))
     (handle-command (->Chow aggregate-id :north #{:b3 :b4}) in-memory-event-store))
 
-    ; once chowed a new turn started
     (let [game (replay-all aggregate-id)]
-      (is (= :north (get-player-turn game)))
-      (is (can-discard? game :north))
-      (is (not (can-discard? game :east)))
-
-      (is (has-fan? game :north (:chow #{:b2 :b3 :b4})))
-      (is (= 11 (count (get-player-tiles game :north))))))
-
-
-
-(with-test-out (run-tests))
-
-
-
-
-
-
-
-
-
+      (is (= (:claimed :chow #{:b3 :b4}) (get-player-state game :north)))))
