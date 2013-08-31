@@ -1,4 +1,4 @@
-(ns majiang-test
+(ns majiang-integration-test
   (:use majiang clojure.test))
 
 (defn replay-all [aggregate-id]
@@ -6,6 +6,17 @@
   (apply-events empty-game (flatten (:transactions (retrieve-event-stream in-memory-event-store aggregate-id)))))
 
 (def aggregate-id 11)
+
+(defn mk-crooked-wall
+  "This function take multiple parameters, at least 1, at most 4.
+  The 1st is wished east tiles, 2nd north, 3rd west, 4th south.
+  Each of them is a vector of 13 tiles representing wished tiles.
+  "
+  [& wished-player-hands]
+  {:pre [(every? #(= 13 (count %1)) wished-player-hands)]}
+
+  (let [all-wished (into [] (apply concat wished-player-hands))]
+    (into all-wished (minus all-tiles all-wished))))
 
 (deftest four-people-joining
   (let [cmd-enter (->NewPlayerEnter aggregate-id)]
@@ -40,9 +51,8 @@
     (is (thrown? Exception (handle-command cmd-enter in-memory-event-store)))))
 
 (deftest player-turn
-  (let [some-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
-        wished-east-tiles (conj some-tiles :fp )
-        crooked-wall (into wished-east-tiles (minus all-tiles wished-east-tiles))
+  (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        crooked-wall (mk-crooked-wall wished-east-tiles)
         events [(->PlayerJoined aggregate-id)
                 (->PlayerJoined aggregate-id)
                 (->PlayerJoined aggregate-id)
@@ -62,10 +72,10 @@
       ;can discard only tiles owned
       (is (thrown? Exception (handle-command (->DiscardTile :east :c5 ) in-memory-event-store))))
 
-    (handle-command (->DiscardTile aggregate-id :east :b1 ) in-memory-event-store)
+    (handle-command (->DiscardTile aggregate-id :east :c3 ) in-memory-event-store)
     (let [game (replay-all aggregate-id)]
-      (is (= [:b1 ] (:east (:discarded (get-hand game)))))
-      (is (not (tile-owned? game :east :b1 )))
+      (is (= [:c3 ] (:east (:discarded (get-hand game)))))
+      (is (not (tile-owned? game :east :c3 )))
       (is (= 13 (count (get-player-tiles game :east ))))
       (is (= :wait-next-turn (get-player-state game :east))))
 
@@ -75,9 +85,8 @@
 
 
 (deftest auction-pass
-  (let [some-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
-        wished-east-tiles (conj some-tiles :fp )
-        crooked-wall (into wished-east-tiles (minus all-tiles wished-east-tiles))
+  (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        crooked-wall (mk-crooked-wall wished-east-tiles)
         events [(->PlayerJoined aggregate-id)
                 (->PlayerJoined aggregate-id)
                 (->PlayerJoined aggregate-id)
@@ -91,16 +100,55 @@
     ; player who discarded can not pass
     (is (thrown? Exception (handle-command (->Pass :east ) in-memory-event-store)))
 
-    ; other players can pass
+    ; other players can pass in any order
+    (handle-command (->Pass aggregate-id :south) in-memory-event-store)
     (handle-command (->Pass aggregate-id :north) in-memory-event-store))
+
     ; but only once
     (is (thrown? Exception (handle-command (->Pass :north ) in-memory-event-store)))
 
     (let [game (replay-all aggregate-id)]
       (= (is (get-player-state game :north) :wait-next-turn))))
 
+(deftest auction-chow
+  (let [wished-east-tiles  [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        wished-north-tiles [:b1     :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
+        wished-west-tiles  [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 crooked-wall)
+                (->TileDiscarded aggregate-id :east :b2)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+    (replay-all aggregate-id)
+
+    ; player who discarded can not chow
+    (is (thrown? Exception (handle-command (->Chow :east #{:b1 :b3}) in-memory-event-store)))
+
+    ; only player on the right can chow
+    (is (thrown? Exception (handle-command (->Chow :west #{:b1 :b3}) in-memory-event-store)))
+
+    ; north can Chow but only with a valid set of tiles
+    (is (thrown? Exception (handle-command (->Chow :north #{:b5 :b6}) in-memory-event-store)))
+    (handle-command (->Chow aggregate-id :north #{:b3 :b4}) in-memory-event-store))
+
+    ; once chowed a new turn started
+    (let [game (replay-all aggregate-id)]
+      (is (= :north (get-player-turn game)))
+      (is (can-discard? game :north))
+      (is (not (can-discard? game :east)))
+
+      (is (has-fan? game :north (:chow #{:b2 :b3 :b4})))
+      (is (= 11 (count (get-player-tiles game :north))))))
+
+
 
 (with-test-out (run-tests))
+
 
 
 
