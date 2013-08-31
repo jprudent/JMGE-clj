@@ -111,9 +111,9 @@
       (= (is (get-player-state game :north) :wait-next-turn))))
 
 (deftest auction-chow
-  (let [wished-east-tiles  [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
-        wished-north-tiles [:b1     :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
-        wished-west-tiles  [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+  (let [wished-east-tiles  [:b1 :b2, :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        wished-north-tiles [:b1 #_ _ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
+        wished-west-tiles  [:b1 :b2, :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
         events [(->PlayerJoined aggregate-id)
                 (->PlayerJoined aggregate-id)
@@ -137,4 +137,34 @@
     (handle-command (->Chow aggregate-id :north #{:b3 :b4}) in-memory-event-store))
 
     (let [game (replay-all aggregate-id)]
-      (is (= (:claimed :chow #{:b3 :b4}) (get-player-state game :north)))))
+      (is (= [:claimed :chow #{:b3 :b4}] (get-player-state game :north)))))
+
+(deftest auction-pung
+  (let [wished-east-tiles  [:b1 :b2 #_ ___ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        wished-north-tiles [:b1 #_ ________ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
+        wished-west-tiles  [:b1 :b2 :b2 :b2 #_ ____ :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 crooked-wall)
+                (->TileDiscarded aggregate-id :east :b2)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+    (replay-all aggregate-id)
+
+    ; player who discarded can not pung
+    (is (thrown? Exception (handle-command (->Pung :east) in-memory-event-store)))
+
+    ; must have appropriate tiles to pung
+    (is (thrown? Exception (handle-command (->Pung :north) in-memory-event-store)))
+
+    ; any player can pung
+    (handle-command (->Pung aggregate-id :west) in-memory-event-store)
+
+    (let [game (replay-all aggregate-id)]
+      (is (= [:claimed :pung] (get-player-state game :west))))))
+
+

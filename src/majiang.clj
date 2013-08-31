@@ -86,6 +86,7 @@
 (defrecord TileDiscarded [aggregate-id player tile])
 (defrecord Passed [aggregate-id player])
 (defrecord Chowed [aggregate-id player owned-tiles])
+(defrecord Punged [aggregate-id player])
 
 ;;; PlayerJoined
 
@@ -145,16 +146,26 @@
 ;;; Passed
 
 (defmethod apply-event Passed
-  [game {player :player :as event}]
+  [game {player :player}]
 
   (assoc-in game [:current-round :current-hand :current-turn :player-states player] :wait-next-turn))
 
 ;;; Chowed
-
+;todo factoriser
 (defmethod apply-event Chowed
-  [game {player :player owned-tiles :owned-tiles :as event}]
-  (let [path #(into  %1)
-        update-state #(assoc-in %1 [:current-round :current-hand :current-turn :player-states player] (:claimed :chow owned-tiles))]
+  [game {player :player owned-tiles :owned-tiles}]
+  (let [update-state #(assoc-in %1
+                                [:current-round :current-hand :current-turn :player-states player]
+                                [:claimed :chow owned-tiles])]
+    (update-state game)))
+
+;;; Punged
+
+(defmethod apply-event Punged
+  [game {player :player owned-tiles :owned-tiles}]
+  (let [update-state #(assoc-in %1
+                                [:current-round :current-hand :current-turn :player-states player]
+                                [:claimed :pung])]
     (update-state game)))
 
 ;;;;;;;;;;;;;;;;;;
@@ -165,6 +176,7 @@
 (defrecord DiscardTile [aggregate-id player tile])
 (defrecord Pass [aggregate-id player])
 (defrecord Chow [aggregate-id player owned-tiles])
+(defrecord Pung [aggregate-id player])
 
 (defn- throw-dice [] (+ 1 (rand-int 6)))
 (defn- new-wall [] all-tiles) ;todo shuffle
@@ -204,7 +216,17 @@
          (= player (get-next-player game))
          (valid-chow? game owned-tiles))
       [(->Chowed aggregate-id player owned-tiles)]
-      (exception "Player can't chow"))))
+      (exception "Player can't chow")))
+
+  Pung
+  (perform [{aggregate-id :aggregate-id player :player} game]
+    (let [last-discarded (get-last-discarded game)
+          get-player-tiles #(get-player-tiles game player)
+          inc-if #(if %1 (inc %2) %2)
+          owned-two? (fn [] (>= (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles)) 2))]
+      (if (and (can-auction? game player) (owned-two?))
+          [(->Punged aggregate-id player)]
+          (exception "Player can't pung")))))
 
 
 (defn handle-command
