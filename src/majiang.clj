@@ -62,6 +62,11 @@
 (defn can-discard? [game player] (not (= :wait-next-turn (get-player-state game player))))
 (defn can-auction? [game player] (= :auction (get-player-state game player)))
 (defn has-fan? [game player fan] (some #(= fan %1) (get-in (get-hand game) [:fans player])))
+(defn has-played-turn? [game player]
+  (let [player-state (get-in game [:current-round :current-hand :current-turn :player-states player])]
+    (or
+     (not (nil? (some #(= % player-state) [:wait-next-turn :pung :kong :hule])))
+     (and (vector? player-state) ( = :chow (first player-state))))))
 
 ; various tiles related functions
 (defn- tile-to-char-seq [tile] (vec (str tile)))
@@ -149,6 +154,36 @@
         [:current-round :current-hand :player-hands player] new-player-tiles)
       [:current-round :current-hand :current-turn :player-states] new-player-states)))
 
+
+
+(defn- apply-max-auction [game]
+  (let [not-player-turnz (minus winds (get-player-turn game))
+       end-turn? (fn [] (every? #(has-played-turn? game %) not-player-turnz))
+       greater? (fn [a b]
+                  (cond (and (vector? a) (vector? b))
+                        (let [a-claim (a 1)]
+                             (cond (= :hule a-claim) a
+                                   (or (= :pung a-claim) (= :kong a-claim)) a
+                                   (= :chow a-claim) a
+                                   :else b))
+                        (vector? a) a
+                        (vector? b) b))
+       max-auction (fn [] (reduce greater? (map #(into [%] (get-player-state game %)) not-player-turnz)))
+       apply-all-passed #()
+       apply-chowed (fn [[player _ _ owned-tile]])
+       apply-punged (fn [player])
+       apply-konged (fn [player])
+       apply-huled (fn [player])]
+
+  (if (end-turn?)
+    (let [max-auctioned (max-auction)]
+      (cond (= :wait-next-turn max-auctioned) (apply-all-passed)
+            (and (vector? max-auctioned) (= :chow (max-auctioned 1))) (apply-chowed max-auctioned)
+            (and (vector? max-auctioned) (= :pung (max-auctioned 1))) (apply-punged max-auctioned)
+            (and (vector? max-auctioned) (= :kong (max-auctioned 1))) (apply-konged max-auctioned)
+            (and (vector? max-auctioned) (= :hule (max-auctioned 1))) (apply-huled max-auctioned))))))
+
+
 ;;; Passed
 
 (defmethod apply-event Passed
@@ -156,28 +191,27 @@
 
   (assoc-in game [:current-round :current-hand :current-turn :player-states player] :wait-next-turn))
 
-(defn- update-state-auctioned [game player auction & more]
+(defn- update-state-auctioned [game player state]
   (assoc-in game
-                                [:current-round :current-hand :current-turn :player-states player]
-                                (into [:claimed auction] more)))
+            [:current-round :current-hand :current-turn :player-states player]
+            state))
 
 ;;; Chowed
-;todo factoriser
 (defmethod apply-event Chowed
   [game {player :player owned-tiles :owned-tiles}]
-  (update-state-auctioned game player :chow owned-tiles))
+  (update-state-auctioned game player [:chow owned-tiles]))
 
 ;;; Punged
 
 (defmethod apply-event Punged
-  [game {player :player owned-tiles :owned-tiles}]
+  [game {player :player}]
   (update-state-auctioned game player :pung))
 
 
 ;;; Konged
 
 (defmethod apply-event Konged
-  [game {player :player owned-tiles :owned-tiles}]
+  [game {player :player}]
   (update-state-auctioned game player :kong))
 
 ;;;;;;;;;;;;;;;;;;
@@ -201,12 +235,13 @@
           inc-if #(if %1 (inc %2) %2)]
        (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles))))
 
+
 (defn- pungish-perform
   "a perform implementation for pung and kong commands"
-  [{aggregate-id :aggregate-id player :player} game event count-in-hand]
+  [{aggregate-id :aggregate-id player :player} game event min-count-in-hand]
   (let [last-discarded #(get-last-discarded game)
-        nb-owned #(count-tiles-of-type game player (last-discarded))]
-      (if (and (can-auction? game player) (>= (nb-owned) count-in-hand))
+        count-in-hand #(count-tiles-of-type game player (last-discarded))]
+      (if (and (can-auction? game player) (>= (count-in-hand) min-count-in-hand))
           [(event)]
           (exception "Player can't pung/kong"))))
 

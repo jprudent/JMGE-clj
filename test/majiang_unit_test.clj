@@ -20,3 +20,14 @@
     (is (= :west (get-next-player (mk-game :north))))
     (is (= :south (get-next-player (mk-game :west))))
     (is (= :east (get-next-player (mk-game :south))))))
+
+(deftest test-has-played-turn?
+  (let [mk-game #(let [] {:current-round
+                    {:current-hand
+                       {:current-turn {:player-states {:east %}}}}})]
+    (is (has-played-turn? (mk-game :wait-next-turn) :east))
+    (is (has-played-turn? (mk-game :pung) :east))
+    (is (has-played-turn? (mk-game :kong) :east))
+    (is (has-played-turn? (mk-game :hule) :east))
+    (is (has-played-turn? (mk-game [:chow #{:b1 :b2}]) :east))
+    (is (not (has-played-turn? (mk-game :foo) :east)))))
