@@ -51,6 +51,11 @@
 (defn get-player-turn [game] (:player (get-turn game)))
 (defn get-last-discarded [game] (last (get-in (get-hand game) [:discarded (get-player-turn game)])))
 (defn get-next-player [game] (winds (mod (inc (.indexOf winds (get-player-turn game))) 4)))
+(defn count-tiles-of-type [game player tile]
+  (let [last-discarded (get-last-discarded game)
+          get-player-tiles #(get-player-tiles game player)
+          inc-if #(if %1 (inc %2) %2)]
+       (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles))))
 
 ; various tests
 (defn tile-owned? [game player tile] (some #(= % tile) (get-player-tiles game player)))
@@ -87,6 +92,7 @@
 (defrecord Passed [aggregate-id player])
 (defrecord Chowed [aggregate-id player owned-tiles])
 (defrecord Punged [aggregate-id player])
+(defrecord Konged [aggregate-id player])
 
 ;;; PlayerJoined
 
@@ -150,23 +156,29 @@
 
   (assoc-in game [:current-round :current-hand :current-turn :player-states player] :wait-next-turn))
 
+(defn- update-state-auctioned [game player auction & more]
+  (assoc-in game
+                                [:current-round :current-hand :current-turn :player-states player]
+                                (into [:claimed auction] more)))
+
 ;;; Chowed
 ;todo factoriser
 (defmethod apply-event Chowed
   [game {player :player owned-tiles :owned-tiles}]
-  (let [update-state #(assoc-in %1
-                                [:current-round :current-hand :current-turn :player-states player]
-                                [:claimed :chow owned-tiles])]
-    (update-state game)))
+  (update-state-auctioned game player :chow owned-tiles))
 
 ;;; Punged
 
 (defmethod apply-event Punged
   [game {player :player owned-tiles :owned-tiles}]
-  (let [update-state #(assoc-in %1
-                                [:current-round :current-hand :current-turn :player-states player]
-                                [:claimed :pung])]
-    (update-state game)))
+  (update-state-auctioned game player :pung))
+
+
+;;; Konged
+
+(defmethod apply-event Konged
+  [game {player :player owned-tiles :owned-tiles}]
+  (update-state-auctioned game player :kong))
 
 ;;;;;;;;;;;;;;;;;;
 ;; Commands
@@ -177,9 +189,26 @@
 (defrecord Pass [aggregate-id player])
 (defrecord Chow [aggregate-id player owned-tiles])
 (defrecord Pung [aggregate-id player])
+(defrecord Kong [aggregate-id player])
+
 
 (defn- throw-dice [] (+ 1 (rand-int 6)))
 (defn- new-wall [] all-tiles) ;todo shuffle
+
+(defn- count-tiles-of-type [game player tile]
+  (let [last-discarded (get-last-discarded game)
+          get-player-tiles #(get-player-tiles game player)
+          inc-if #(if %1 (inc %2) %2)]
+       (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles))))
+
+(defn- pungish-perform
+  "a perform implementation for pung and kong commands"
+  [{aggregate-id :aggregate-id player :player} game event count-in-hand]
+  (let [last-discarded #(get-last-discarded game)
+        nb-owned #(count-tiles-of-type game player (last-discarded))]
+      (if (and (can-auction? game player) (>= (nb-owned) count-in-hand))
+          [(event)]
+          (exception "Player can't pung/kong"))))
 
 (extend-protocol CommandHandler
 
@@ -219,15 +248,12 @@
       (exception "Player can't chow")))
 
   Pung
-  (perform [{aggregate-id :aggregate-id player :player} game]
-    (let [last-discarded (get-last-discarded game)
-          get-player-tiles #(get-player-tiles game player)
-          inc-if #(if %1 (inc %2) %2)
-          owned-two? (fn [] (>= (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles)) 2))]
-      (if (and (can-auction? game player) (owned-two?))
-          [(->Punged aggregate-id player)]
-          (exception "Player can't pung")))))
+  (perform [{aggregate-id :aggregate-id player :player :as event} game]
+           (pungish-perform event game #(->Punged aggregate-id player) 2))
 
+  Kong
+  (perform [{aggregate-id :aggregate-id player :player :as event} game]
+           (pungish-perform event game #(->Konged aggregate-id player) 3)))
 
 (defn handle-command
   "Interface between commands and event-store"
@@ -237,6 +263,7 @@
         current-state (apply-events empty-game old-events)
         new-events (perform command current-state)]
     (append-events event-store (:aggregate-id command) event-stream new-events)))
+
 
 
 

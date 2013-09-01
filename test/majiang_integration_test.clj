@@ -167,4 +167,32 @@
     (let [game (replay-all aggregate-id)]
       (is (= [:claimed :pung] (get-player-state game :west))))))
 
+(deftest auction-kong
+  (let [wished-east-tiles  [:b1 :b2 #_ ___ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        wished-north-tiles [:b1 #_ ________ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
+        wished-west-tiles  [:b1 :b2 :b2 :b2 #_ ____ :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
+        crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 crooked-wall)
+                (->TileDiscarded aggregate-id :east :b2)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+    (replay-all aggregate-id)
+
+    ; player who discarded can not
+    (is (thrown? Exception (handle-command (->Kong :east) in-memory-event-store)))
+
+    ; must have appropriate tiles
+    (is (thrown? Exception (handle-command (->Kong :north) in-memory-event-store)))
+
+    ; any player can kong
+    (handle-command (->Kong aggregate-id :west) in-memory-event-store)
+
+    (let [game (replay-all aggregate-id)]
+      (is (= [:claimed :kong] (get-player-state game :west))))))
+
 
