@@ -20,3 +20,13 @@
   {:pre [(not (nil? t))]}
 
   (assoc tile-move :source ts :destination (conj destination t)))
+
+(defn- move-tiles
+  [nb-tiles source destination]
+  {:pre [(>= (count source) nb-tiles)]}
+
+  (let [taken (subvec source 0 nb-tiles)
+        new-source (subvec source nb-tiles)
+        new-destination (into taken destination)]
+    [new-source new-destination]))
+

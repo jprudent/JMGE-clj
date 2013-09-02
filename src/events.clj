@@ -12,23 +12,17 @@
 
 (defmethod apply-event PlayerJoined
   [game event]
-  (assoc game :nb-active-players (inc (:nb-active-players game))))
+  (inc-nb-active-players game))
 
 ;;; GameStarted
 
-(defn- move-tiles [{nb-tiles :nb-tiles [:as source] :source [:as destination] :destination :as tile-move}]
-  {:pre [(>= (count source) nb-tiles)]}
-  (let [taken (subvec source 0 nb-tiles)
-        new-source (subvec source nb-tiles)
-        new-destination (into taken destination)]
-    (assoc tile-move :source new-source :destination new-destination)))
+(defn- give-13-tiles [{:keys [player-hands wall] :as hand} to-player]
+  (let [[new-wall new-player-hand] (move-tiles 13 wall (list))
+        new-player-hands (assoc player-hands to-player new-player-hand)]
+       (assoc hand :player-hands new-player-hands, :wall new-wall)))
 
 (defn- initial-hands-and-wall [wall]
-    (reduce
-     #(let [{player-hand :destination wall :source} (move-tiles {:source (:wall %1) :destination (list) :nb-tiles 13})
-            current-player-hands (:player-hands %1)]
-       (assoc %1, :player-hands (assoc current-player-hands %2 player-hand), :wall wall))
-     {:wall wall :player-hands {}} winds))
+  (reduce give-13-tiles {:wall wall :player-hands {}} winds))
 
 (defn- draw-tile
 
@@ -66,19 +60,14 @@
 (defmethod apply-event TileDiscarded
   [game {player :player discarded-tile :tile}]
 
-  (let [player-discarded (player (:discarded (get-hand game)))
-        new-player-discarded (conj player-discarded discarded-tile)
+  (let [new-player-discarded (conj (get-player-discarded game player) discarded-tile)
         new-player-tiles (minus (get-player-tiles game player) [discarded-tile])
-        new-player-states (reduce #(assoc %1 %2 (if (= player %2) :wait-next-turn :auction)) {} winds)]
-    (assoc-in
-      (assoc-in
-        (assoc-in game [:current-round :current-hand :discarded player] new-player-discarded)
-        [:current-round :current-hand :player-hands player] new-player-tiles)
-      [:current-round :current-hand :current-turn :player-states] new-player-states)))
+        new-players-states (reduce #(assoc %1 %2 (if (= player %2) :wait-next-turn :auction)) {} winds)]
+    (->> game
+         (update-player-discarded player new-player-discarded)
+         (update-player-tiles player new-player-tiles)
+         (update-players-states new-players-states))))
 
-
-(defn- update-turn [game turn]
-  (assoc-in game [:current-round :current-hand :current-turn] turn))
 
 (defn- all-passed
 
