@@ -31,3 +31,26 @@
     (is (has-played-turn? (mk-game :hule) :east))
     (is (has-played-turn? (mk-game [:chow #{:b1 :b2}]) :east))
     (is (not (has-played-turn? (mk-game :foo) :east)))))
+
+(deftest test-can-auction?
+  (let [game {:current-round
+                    {:current-hand
+                       {:current-turn {:player-states {:south :auction,
+                                                       :west :auction,
+                                                       :north :auction,
+                                                       :east :wait-next-turn}}}}}]
+    (is (can-auction? game :south))
+    (is (can-auction? game :west))
+    (is (can-auction? game :north))
+    (is (not (can-auction? game :east)))))
+
+(deftest test-end-turn?
+  (let [game {:current-round
+                    {:current-hand
+                       {:current-turn {:player :east
+                                       :player-states {:south :auction,
+                                                       :west :auction,
+                                                       :north :auction,
+                                                       :east :wait-next-turn}}}}}]
+    (is (not (end-turn? game)))))
+

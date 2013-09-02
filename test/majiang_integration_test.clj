@@ -77,7 +77,10 @@
       (is (= [:c3 ] (:east (:discarded (get-hand game)))))
       (is (not (tile-owned? game :east :c3 )))
       (is (= 13 (count (get-player-tiles game :east ))))
-      (is (= :wait-next-turn (get-player-state game :east))))
+      (is (= :wait-next-turn (get-player-state game :east)))
+      (is (= :auction (get-player-state game :north)))
+      (is (= :auction (get-player-state game :west)))
+      (is (= :auction (get-player-state game :south))))
 
     ;can't discard twice
     (is (thrown? Exception (handle-command (->DiscardTile aggregate-id :east :b2 ) in-memory-event-store)))))
@@ -98,10 +101,12 @@
     (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
 
     ; player who discarded can not pass
-    (is (thrown? Exception (handle-command (->Pass :east ) in-memory-event-store)))
+    (is (thrown? Exception (handle-command (->Pass aggregate-id :east ) in-memory-event-store)))
 
     ; other players can pass in any order
+    (println :south (get-player-state (replay-all aggregate-id) :south) (can-auction? (replay-all aggregate-id) :south))
     (handle-command (->Pass aggregate-id :south) in-memory-event-store)
+    (println :north (get-player-state (replay-all aggregate-id) :north) (can-auction? (replay-all aggregate-id) :north))
     (handle-command (->Pass aggregate-id :north) in-memory-event-store))
 
     ; but only once
@@ -138,7 +143,7 @@
     (let [game (replay-all aggregate-id)]
       (is (= [:chow #{:b3 :b4}] (get-player-state game :north)))))
 
-(deftest auction-pung
+(comment deftest auction-pung
   (let [wished-east-tiles  [:b1 :b2 #_ ____ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
         wished-north-tiles [:b1 #_ ________ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5]
         wished-west-tiles  [:b1 :b2 :b2 :b2 #_ ____ :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
@@ -193,6 +198,28 @@
     (let [game (replay-all aggregate-id)]
       (is (= :kong (get-player-state game :west))))))
 
+(deftest auction-all-passed
+  (let [events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 all-tiles)
+                (->TileDiscarded aggregate-id :east :b3)]]
+
+    (clear-events in-memory-event-store aggregate-id)
+    (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
+
+    (handle-command (->Pass aggregate-id :north) in-memory-event-store)
+    (handle-command (->Pass aggregate-id :west) in-memory-event-store)
+    (handle-command (->Pass aggregate-id :south) in-memory-event-store)
+
+    ;a new turn is launched
+    (let [game (replay-all aggregate-id)]
+      (is (= :north (get-player-turn game)))
+      (is (= 14 (count (get-player-tiles game :north))))
+      (is (can-discard? game :north))
+      (is (every? #(not (can-auction? game %)) (minus winds [:north]))))))
+
 (comment deftest auction-chow-pung-compete
   (let [wished-east-tiles  [:b1 :b2 :b3     :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
         wished-north-tiles [:b1             :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6]
@@ -212,9 +239,10 @@
     (handle-command (->Pung aggregate-id :west) in-memory-event-store)
     (handle-command (->Pass aggregate-id :south) in-memory-event-store)
 
-    ;a new turn is launched
+    ;a new turn is launched, pung claim win
     (let [game (replay-all aggregate-id)]
       (is (= :west (get-player-turn game)))
+      (is (= 11 (count get-player-tiles game)))
       (is (not (tile-owned? game :west :b3)))
       (is (has-fan? game :west [:b3 :b3 :b3]))
       (is (can-discard? game :west))

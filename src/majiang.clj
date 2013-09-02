@@ -6,8 +6,13 @@
 ;; utility, general purpose function
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defn exception [msg]
+(defn exception
+
+  ([msg]
   (throw (Exception. msg)))
+
+  ([msg1 & more]
+  (exception (apply str msg1 more))))
 
 (defn minus [v1 v2]
   "substract 2 vectors, v2 must be a subset of v1"
@@ -40,8 +45,10 @@
 (defrecord Round [current-hand remaining-prevalent-wind])
 (defrecord Hand [current-turn wall player-hands discarded fans])
 (defrecord Turn [player player-states])
+(defn init-turn [player-turn] (->Turn player-turn {}))
 (defn init-hand [player-turn]
-  (->Hand (->Turn player-turn {}) nil nil {:east [] :north [] :west [] :south []} {:east [] :north [] :west [] :south []}))
+  (->Hand (init-turn player-turn) nil nil {:east [] :north [] :west [] :south []} {:east [] :north [] :west [] :south []}))
+
 
 ; various accessors
 (defn get-hand [game] (:current-hand (:current-round game)))
@@ -49,6 +56,7 @@
 (defn get-player-tiles [game player] (player (:player-hands (get-hand game))))
 (defn get-player-state [game player] (get-in (get-turn game) [:player-states player]))
 (defn get-player-turn [game] (:player (get-turn game)))
+(defn get-not-player-turnz [game] (minus winds [(get-player-turn game)]))
 (defn get-last-discarded [game] (last (get-in (get-hand game) [:discarded (get-player-turn game)])))
 (defn get-next-player [game] (winds (mod (inc (.indexOf winds (get-player-turn game))) 4)))
 (defn count-tiles-of-type [game player tile]
@@ -67,15 +75,14 @@
     (or
      (not (nil? (some #(= % player-state) [:wait-next-turn :pung :kong :hule])))
      (and (vector? player-state) ( = :chow (first player-state))))))
+(defn end-turn? [game] (every? #(has-played-turn? game %) (get-not-player-turnz game)))
 
 ; various tiles related functions
 (defn- tile-to-char-seq [tile] (vec (str tile)))
 (defn- char-to-int [c] (- (int c) (int \0)))
-
 (defn family [tile] ((tile-to-char-seq tile) 1))
 (defn order [tile]  (char-to-int ((tile-to-char-seq tile) 2)))
 (defn to-tile [family order] (keyword (str family order)))
-
 (defn valid-chow? [game owned-tiles]
   {:pre [(set? owned-tiles)]}
   (let [last-discarded (get-last-discarded game)
@@ -86,6 +93,7 @@
                               (reduce #(conj %1 (to-tile expected-family (+ order %2))) #{} orders)
                               last-discarded)) ]
     (not (nil? (some #(= proposed-chow %1) (map to-chow [[-2 -1] [-1 1] [1 2]]))))))
+(defn create-fan [type tile] [:pung tile])
 
 ;;;;;;;;;;;;;;;;;;;;;;;;
 ;; Events
@@ -121,7 +129,16 @@
        (assoc %1, :player-hands (assoc current-player-hands %2 player-hand), :wall wall))
      {:wall wall :player-hands {}} winds))
 
-(defn- draw-tile [hand to-player]
+(defn- draw-tile
+
+  "2 parameters :
+  - hand is :current-hand
+  - to-player is player that draws tile
+
+  1 parameter :
+  - game: the game with a tile drawed by player-turn"
+
+  ([hand to-player]
   (let [player-hands (:player-hands hand)
         player-hand (to-player player-hands)
         wall (:wall hand)
@@ -130,8 +147,12 @@
         hand-with-updated-wall (assoc hand :wall new-wall)]
     (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
 
+  ([game]
+   (update-in game [:current-round :current-hand] draw-tile (get-player-turn game))))
+
 (defn- new-hand [wall]
-  (let [player-turn :east hand-after-wall-drawn (merge (init-hand player-turn) (initial-hands-and-wall wall))]
+  (let [player-turn :east
+        hand-after-wall-drawn (merge (init-hand player-turn) (initial-hands-and-wall wall))]
     (draw-tile hand-after-wall-drawn player-turn)))
 
 (defmethod apply-event GameStarted
@@ -155,41 +176,67 @@
       [:current-round :current-hand :current-turn :player-states] new-player-states)))
 
 
+(defn- update-turn [game turn]
+  (assoc-in game [:current-round :current-hand :current-turn] turn))
+
+(defn- all-passed
+
+  "Update the game when all players passed for the discarded tile"
+
+  [game]
+  {:pre [(every? #(= :wait-next-turn (get-player-state game %)) winds)]}
+
+  (let [new-player-turn (get-next-player game)
+        new-turn (init-turn new-player-turn)
+        set-new-turn #(update-turn % new-turn)
+        player-turn-draw-tile #(assoc-in % [:current-round :current-hand :player-hands] (draw-tile % ))]
+
+    (draw-tile (set-new-turn game))))
+
+(defn- punged
+
+  "Update the game when a player punged"
+
+  [game player]
+
+  (let [set-new-turn #(update-turn % (init-turn player))
+
+        player-turn-draw-tile #(assoc-in % [:current-round :current-hand :player-hands] (draw-tile % ))]
+  ))
 
 (defn- apply-max-auction [game]
-  (let [not-player-turnz (minus winds (get-player-turn game))
-       end-turn? (fn [] (every? #(has-played-turn? game %) not-player-turnz))
-       greater? (fn [a b]
-                  (cond (and (vector? a) (vector? b))
-                        (let [a-claim (a 1)]
-                             (cond (= :hule a-claim) a
-                                   (or (= :pung a-claim) (= :kong a-claim)) a
-                                   (= :chow a-claim) a
-                                   :else b))
-                        (vector? a) a
-                        (vector? b) b))
-       max-auction (fn [] (reduce greater? (map #(into [%] (get-player-state game %)) not-player-turnz)))
-       apply-all-passed #()
-       apply-chowed (fn [[player _ _ owned-tile]])
-       apply-punged (fn [player])
-       apply-konged (fn [player])
-       apply-huled (fn [player])]
+  (let [greater? (fn [[_ a-state & _ :as a] b]
+                    (cond (= :hule a-state) a
+                          (or (= :pung a-state) (= :kong a-state)) a
+                          (= :chow a-state) a
+                          :else b))
+        max-auction (fn [] (reduce greater?
+                                  (map #(into [%] (flatten [(get-player-state game %)]))  (get-not-player-turnz game))))
 
-  (if (end-turn?)
-    (let [max-auctioned (max-auction)]
-      (cond (= :wait-next-turn max-auctioned) (apply-all-passed)
-            (and (vector? max-auctioned) (= :chow (max-auctioned 1))) (apply-chowed max-auctioned)
-            (and (vector? max-auctioned) (= :pung (max-auctioned 1))) (apply-punged max-auctioned)
-            (and (vector? max-auctioned) (= :kong (max-auctioned 1))) (apply-konged max-auctioned)
-            (and (vector? max-auctioned) (= :hule (max-auctioned 1))) (apply-huled max-auctioned))))))
+        chowed (fn [[player _ owned-tile]])
+        konged (fn [player])
+        huled (fn [player])]
+
+  (if (end-turn? game)
+
+    (let [[_ state & _ :as max-auctioned] (max-auction)]
+      ((state {:wait-next-turn all-passed
+               :chow chowed
+               :pung punged
+               :kong konged
+               :hule huled}) game))
+    game)))
 
 
 ;;; Passed
 
 (defmethod apply-event Passed
   [game {player :player}]
+  (let [update-player-turn-state #(assoc-in %
+                                            [:current-round :current-hand :current-turn :player-states player]
+                                            :wait-next-turn)]
+  (apply-max-auction (update-player-turn-state game))))
 
-  (assoc-in game [:current-round :current-hand :current-turn :player-states player] :wait-next-turn))
 
 (defn- update-state-auctioned [game player state]
   (assoc-in game
@@ -270,7 +317,7 @@
   (perform [{aggregate-id :aggregate-id player :player} game]
     (if (can-auction? game player)
       [(->Passed aggregate-id player)]
-      (exception "Player can't make auction for discarded tile")))
+      (exception "Player " player " can't pass")))
 
   Chow
   (perform [{aggregate-id :aggregate-id player :player owned-tiles :owned-tiles} game]
