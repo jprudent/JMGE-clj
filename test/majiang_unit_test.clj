@@ -54,3 +54,6 @@
                                                        :east :wait-next-turn}}}}}]
     (is (not (end-turn? game)))))
 
+(deftest test-create-fan
+  (is (= [:pung :b1] (create-fan :pung :b1))))
+

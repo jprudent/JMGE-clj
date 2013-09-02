@@ -16,44 +16,11 @@
 
 ;;; GameStarted
 
-(defn- give-13-tiles [{:keys [player-hands wall] :as hand} to-player]
-  (let [[new-wall new-player-hand] (move-tiles 13 wall (list))
-        new-player-hands (assoc player-hands to-player new-player-hand)]
-       (assoc hand :player-hands new-player-hands, :wall new-wall)))
-
-(defn- initial-hands-and-wall [wall]
-  (reduce give-13-tiles {:wall wall :player-hands {}} winds))
-
-(defn- draw-tile
-
-  "2 parameters :
-  - hand is :current-hand
-  - to-player is player that draws tile
-
-  1 parameter :
-  - game: the game with a tile drawed by player-turn"
-
-  ([hand to-player]
-  (let [player-hands (:player-hands hand)
-        player-hand (to-player player-hands)
-        wall (:wall hand)
-        tile-move {:source wall :destination player-hand}
-        {new-wall :source new-hand :destination} (move-tile tile-move)
-        hand-with-updated-wall (assoc hand :wall new-wall)]
-    (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
-
-  ([game]
-   (update-in game [:current-round :current-hand] draw-tile (get-player-turn game))))
-
-(defn- new-hand [wall]
-  (let [player-turn :east
-        hand-after-wall-drawn (merge (init-hand player-turn) (initial-hands-and-wall wall))]
-    (draw-tile hand-after-wall-drawn player-turn)))
-
 (defmethod apply-event GameStarted
-  [game event]
-
-  (assoc game :current-round (->Round (new-hand (:wall event)) winds)))
+  [game {wall :wall}]
+  (->> game
+       (update-round (new-round wall))
+       (draw-tile)))
 
 ;;; TileDiscarded
 
@@ -70,51 +37,61 @@
 
 
 (defn- all-passed
-
   "Update the game when all players passed for the discarded tile"
-
-  [game]
+  [game & _]
   {:pre [(every? #(= :wait-next-turn (get-player-state game %)) winds)]}
 
-  (let [new-player-turn (get-next-player game)
-        new-turn (init-turn new-player-turn)
-        set-new-turn #(update-turn % new-turn)
-        player-turn-draw-tile #(assoc-in % [:current-round :current-hand :player-hands] (draw-tile % ))]
-
-    (draw-tile (set-new-turn game))))
+  (let [new-turn (init-turn (get-next-player game))]
+    (->> game
+         (update-turn new-turn)
+         (draw-tile))))
 
 (defn- punged
-
   "Update the game when a player punged"
-
   [game player]
 
-  (let [set-new-turn #(update-turn % (init-turn player))
+  (let [last-discarded (get-last-discarded game)
+        player-turn (get-player-turn game)
+        new-fan (create-fan :pung last-discarded)
+        new-turn (init-turn player)]
+    (->> game
+         (remove-from-player-tiles player 2 last-discarded)
+         (remove-last-discarded)
+         (add-player-fan player new-fan)
+         (update-turn new-turn))))
 
-        player-turn-draw-tile #(assoc-in % [:current-round :current-hand :player-hands] (draw-tile % ))]
-  ))
+(defn- chowed
+  "Update the game when a player punged"
+  [game player])
+
+(defn- konged
+  "Update the game when a player punged"
+  [game player])
+
+(defn- huled
+  "Update the game when a player punged"
+  [game player])
+
+(defn- greater [[_ a-state & _ :as a] [_ b-state & _ :as b]]
+  (let [order [:hule :kong :pung :chow :wait-next-turn]
+        a-val (.indexOf order a-state)
+        b-val (.indexOf order b-state)
+        a-is-greater ( > 0 (- a-val b-val))]
+    (if a-is-greater a b)))
 
 (defn- apply-max-auction [game]
-  (let [greater? (fn [[_ a-state & _ :as a] b]
-                    (cond (= :hule a-state) a
-                          (or (= :pung a-state) (= :kong a-state)) a
-                          (= :chow a-state) a
-                          :else b))
-        max-auction (fn [] (reduce greater?
-                                  (map #(into [%] (flatten [(get-player-state game %)]))  (get-not-player-turnz game))))
-
-        chowed (fn [[player _ owned-tile]])
-        konged (fn [player])
-        huled (fn [player])]
+  (let [prepend-player-to-state #(into [%] (flatten [(get-player-state game %)]))
+        prepended-player-to-states (map prepend-player-to-state (get-not-player-turnz game))
+        find-max-auction (fn [] (reduce greater prepended-player-to-states))]
 
   (if (end-turn? game)
-
-    (let [[_ state & _ :as max-auctioned] (max-auction)]
-      ((state {:wait-next-turn all-passed
+    (let [[player state & _] (find-max-auction)]
+      (println player state)
+      ((state {:wait-next-turn all-passed ;todo multimethod
                :chow chowed
                :pung punged
                :kong konged
-               :hule huled}) game))
+               :hule huled}) game player))
     game)))
 
 

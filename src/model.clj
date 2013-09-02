@@ -12,13 +12,28 @@
                                       :we :wn :ww :ws :dr :dg :dw ])))))
 
 (defrecord Turn [player player-states])
+
 (defn init-turn [player-turn] (->Turn player-turn {}))
 
+
 (defrecord Hand [current-turn wall player-hands discarded fans])
-(defn init-hand [player-turn]
+
+(defn- init-hand [player-turn]
   (->Hand (init-turn player-turn) nil nil {:east [] :north [] :west [] :south []} {:east [] :north [] :west [] :south []}))
 
+(defn- give-13-tiles [{:keys [player-hands wall] :as hand} to-player]
+  (let [[new-wall new-player-hand] (move-tiles 13 wall (list))
+        new-player-hands (assoc player-hands to-player new-player-hand)]
+       (assoc hand :player-hands new-player-hands, :wall new-wall)))
+
+(defn- initial-hands-and-wall [wall]
+  (reduce give-13-tiles {:wall wall :player-hands {}} winds))
+
+(defn- new-hand [wall]
+  (merge (init-hand :east) (initial-hands-and-wall wall)))
+
 (defrecord Round [current-hand remaining-prevalent-wind])
+(defn- new-round [wall] (->Round (new-hand wall) winds))
 
 (defrecord Game [current-round nb-active-players])
 (def empty-game (->Game nil 0))
@@ -59,7 +74,7 @@
 
 (defn can-auction? [game player] (= :auction (get-player-state game player)))
 
-(defn has-fan? [game player fan] (some #(= fan %1) (get-in (get-hand game) [:fans player])))
+(defn has-fan? [game player fan] (not (nil? (some #(= fan %1) (get-in (get-hand game) [:fans player])))))
 
 (defn has-played-turn? [game player]
   (let [player-state (get-in game [:current-round :current-hand :current-turn :player-states player])]
@@ -93,7 +108,7 @@
                               last-discarded)) ]
     (not (nil? (some #(= proposed-chow %1) (map to-chow [[-2 -1] [-1 1] [1 2]]))))))
 
-(defn create-fan [type tile] [type tile])
+(defn create-fan [type & tiles] (into [type] tiles))
 
 
 ;;; update functions
@@ -118,7 +133,44 @@
   [new-players-states game]
   (assoc-in game [:current-round :current-hand :current-turn :player-states] new-players-states))
 
-(defn- update-turn [game turn]
+(defn- update-turn [new-turn game]
   "Replace the current turn of the game"
-  (assoc-in game [:current-round :current-hand :current-turn] turn))
+  (assoc-in game [:current-round :current-hand :current-turn] new-turn))
+
+(defn- update-round [new-round game]
+  (assoc game :current-round new-round))
+
+(defn- draw-tile
+
+  "2 parameters :
+  - hand is :current-hand
+  - to-player is player that draws tile
+
+  1 parameter :
+  - game: the game with a tile drawed by player-turn"
+
+  ([hand to-player]
+  (let [player-hands (:player-hands hand)
+        player-hand (to-player player-hands)
+        wall (:wall hand)
+        tile-move {:source wall :destination player-hand}
+        {new-wall :source new-hand :destination} (move-tile tile-move)
+        hand-with-updated-wall (assoc hand :wall new-wall)]
+    (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
+
+  ([game]
+   (update-in game [:current-round :current-hand] draw-tile (get-player-turn game))))
+
+(defn- remove-from-player-tiles [player nb tile game]
+  (let [tiles-to-remove (into [] (take nb (repeat tile)))
+        new-player-tiles (minus (get-player-tiles game player) tiles-to-remove)]
+    (update-player-tiles player new-player-tiles game)))
+
+(defn- remove-last-discarded [game]
+  (let [player-turn (get-player-turn game)
+        new-player-turn-discarded (pop (get-player-discarded game player-turn))]
+    (update-player-discarded player-turn new-player-turn-discarded game)))
+
+(defn- add-player-fan [player fan game]
+  (update-in game [:current-round :current-hand :fans player] conj fan))
 

@@ -34,12 +34,11 @@
           empty-stream))
 
       (append-events [this aggregate-id previous-es events]
-        (let [next-es (->EventStream (inc (:version previous-es))
-                        (conj (:transactions previous-es)
-                          events))
+        (let [next-es (->EventStream (inc (:version previous-es)) (conj (:transactions previous-es) events))
               replaced (.replace streams aggregate-id previous-es next-es)]
           (when-not replaced (throw (ConcurrentModificationException.)))))
 
       (clear-events [this aggregate-id]
         (.put streams aggregate-id empty-stream)))))
+
 

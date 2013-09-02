@@ -220,7 +220,7 @@
       (is (can-discard? game :north))
       (is (every? #(not (can-auction? game %)) (minus winds [:north]))))))
 
-(comment deftest auction-chow-pung-compete
+(deftest auction-chow-pung-compete
   (let [wished-east-tiles  [:b1 :b2 :b3     :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4]
         wished-north-tiles [:b1             :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6]
         wished-west-tiles  [        :b3 :b3     :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6]
@@ -242,11 +242,10 @@
     ;a new turn is launched, pung claim win
     (let [game (replay-all aggregate-id)]
       (is (= :west (get-player-turn game)))
-      (is (= 11 (count get-player-tiles game)))
+      (is (= 11 (count (get-player-tiles game :west))))
       (is (not (tile-owned? game :west :b3)))
-      (is (has-fan? game :west [:b3 :b3 :b3]))
+      (is (has-fan? game :west (create-fan :pung :b3)))
       (is (can-discard? game :west))
-      (is (every? #(not (can-auction? %)) (minus winds [:west]))))))
-
+      (is (every? #(not (can-auction? game %)) (minus winds [:west]))))))
 
 
