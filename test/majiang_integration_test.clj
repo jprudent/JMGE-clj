@@ -249,6 +249,34 @@
       (is (can-discard? game :west ))
       (is (every? #(not (can-auction? game %)) (minus winds [:west ]))))))
 
+(deftest auction-chow-kong-compete
+  (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
+        wished-north-tiles [:b1 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
+        wished-west-tiles [:b3 :b3 :b3 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
+        crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
+        events [(->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->PlayerJoined aggregate-id)
+                (->GameStarted aggregate-id 6 6 crooked-wall)
+                (->TileDiscarded aggregate-id :east :b3 )]]
+
+    (in-game events)
+
+    (handle-command (->Chow aggregate-id :north #{:b4 :b5 }) in-memory-event-store)
+    (handle-command (->Kong aggregate-id :west ) in-memory-event-store)
+    (handle-command (->Pass aggregate-id :south ) in-memory-event-store)
+
+    ;a new turn is launched, pung claim win
+    (let [game (replay-all aggregate-id)]
+      (is (= :west (get-player-turn game)))
+      (is (= 11 (count (get-player-tiles game :west ))))
+      (is (not (tile-owned? game :west :b3 )))
+      (is (has-fan? game :west (create-fan :kong :b3 )))
+      (is (can-discard? game :west ))
+      (is (every? #(not (can-auction? game %)) (minus winds [:west ]))))))
+
+
 (deftest auction-chow-only-compete
   (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         wished-north-tiles [:b1 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
