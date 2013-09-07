@@ -7,6 +7,8 @@
 
 (def aggregate-id 11)
 
+(defn play-game [] (replay-all aggregate-id))
+
 (defn mk-crooked-wall
   "This function take multiple parameters, at least 1, at most 4.
   The 1st is wished east tiles, 2nd north, 3rd west, 4th south.
@@ -231,7 +233,24 @@
                 (->PlayerJoined aggregate-id)
                 (->GameStarted aggregate-id 6 6 crooked-wall)
                 (->TileDiscarded aggregate-id :east :b3)]]
+    (comment
 
+      (in-game
+       events
+       (handle-command (->Chow aggregate-id :north #{:b4 :b5}) in-memory-event-store)
+       (handle-command (->Pung aggregate-id :west) in-memory-event-store)
+       (handle-command (->Pass aggregate-id :south) in-memory-event-store)
+
+       ;a new turn is launched, pung claim win
+       (let [game (replay-all aggregate-id)]
+         (is (= :west (get-player-turn game)))
+         (is (= 11 (count (get-player-tiles game :west))))
+         (is (not (tile-owned? game :west :b3)))
+         (is (has-fan? game :west (create-fan :pung :b3)))
+         (is (can-discard? game :west))
+         (is (every? #(not (can-auction? game %)) (minus winds [:west])))))
+
+    )
     (clear-events in-memory-event-store aggregate-id)
     (append-events in-memory-event-store aggregate-id (->EventStream 0 []) events)
 
