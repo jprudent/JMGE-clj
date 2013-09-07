@@ -108,7 +108,8 @@
                               last-discarded)) ]
     (not (nil? (some #(= proposed-chow %1) (map to-chow [[-2 -1] [-1 1] [1 2]]))))))
 
-(defn create-fan [type & tiles] (into [type] tiles))
+(defn create-fan [type & tiles]
+  (into [type] (sort tiles)))
 
 
 ;;; update functions

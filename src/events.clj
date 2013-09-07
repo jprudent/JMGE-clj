@@ -61,8 +61,21 @@
          (update-turn new-turn))))
 
 (defn- chowed
-  "Update the game when a player punged"
-  [game player])
+  "Update the game when a player chowed"
+  [game player]
+
+  (let [[t1 t2 :as tiles] (seq ((get-player-state game player) 1))
+        last-discarded (get-last-discarded game)
+        player-turn (get-player-turn game)
+        new-fan (create-fan :chow last-discarded t1 t2)
+        new-turn (init-turn player)]
+
+    (->> game
+      (remove-from-player-tiles player 1 t1)
+      (remove-from-player-tiles player 1 t2)
+      (remove-last-discarded)
+      (add-player-fan player new-fan)
+      (update-turn new-turn))))
 
 (defn- konged
   "Update the game when a player punged"
@@ -72,7 +85,7 @@
   "Update the game when a player punged"
   [game player])
 
-(defn- greater [[_ a-state & _ :as a] [_ b-state & _ :as b]]
+(defn greater-auction [[_ a-state & _ :as a] [_ b-state & _ :as b]]
   (let [order [:hule :kong :pung :chow :wait-next-turn]
         a-val (.indexOf order a-state)
         b-val (.indexOf order b-state)
@@ -82,11 +95,10 @@
 (defn- apply-max-auction [game]
   (let [prepend-player-to-state #(into [%] (flatten [(get-player-state game %)]))
         prepended-player-to-states (map prepend-player-to-state (get-not-player-turnz game))
-        find-max-auction (fn [] (reduce greater prepended-player-to-states))]
+        find-max-auction (fn [] (reduce greater-auction prepended-player-to-states))]
 
   (if (end-turn? game)
     (let [[player state & _] (find-max-auction)]
-      (println player state)
       ((state {:wait-next-turn all-passed ;todo multimethod
                :chow chowed
                :pung punged
