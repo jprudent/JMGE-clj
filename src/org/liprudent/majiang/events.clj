@@ -5,6 +5,7 @@
 (defrecord Chowed [aggregate-id player owned-tiles])
 (defrecord Punged [aggregate-id player])
 (defrecord Konged [aggregate-id player])
+(defrecord Huled [aggregate-id player hule-details])
 
 ;;; PlayerJoined
 
@@ -66,7 +67,7 @@
 (defn- konged
   "Update the game when a player konged"
   [game player]
-  (draw-tile (pungished game player :kong)))
+  (draw-tile (pungished game player :kong )))
 
 (defn- chowed
   "Update the game when a player chowed"
@@ -88,7 +89,7 @@
 
 
 (defn- huled
-  "Update the game when a player punged"
+  "Update the game when a player huled"
   [game player])
 
 (defn greater-auction [[_ a-state & _ :as a] [_ b-state & _ :as b]]
@@ -129,6 +130,7 @@
     state))
 
 ;;; Chowed
+
 (defmethod apply-event Chowed
   [game {player :player owned-tiles :owned-tiles}]
   (update-state-auctioned game player [:chow owned-tiles]))
@@ -145,3 +147,19 @@
 (defmethod apply-event Konged
   [game {player :player}]
   (update-state-auctioned game player :kong ))
+
+;;; Huled
+
+(defn last-hand?
+  [game]
+  (= (get-remaining-dealers game) [:south ]))
+
+(defn last-round?
+  [game]
+  (= (get-remaining-prevalent-wind game) [:south ]))
+
+(defn end-game? [game] (and (last-hand? game) (last-round? game)))
+
+(defmethod apply-event Huled
+  [game {player :player}]
+  )

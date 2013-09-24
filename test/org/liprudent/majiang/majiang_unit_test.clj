@@ -61,3 +61,19 @@
     (is (= kong (greater-auction kong pass)))
     (is (= kong (greater-auction chow kong)))))
 
+
+(deftest test-last-hand?
+  (let [create (fn [remaining-dealers]
+                 {:current-round {:current-hand {:remaining-dealers remaining-dealers}}})]
+    (is (not (last-hand? (create winds))))
+    (is (not (last-hand? (create (subvec winds 1)))))
+    (is (not (last-hand? (create (subvec winds 2)))))
+    (is (last-hand? (create (subvec winds 3))))))
+
+(deftest test-last-round?
+  (let [create (fn [remaining-prevalent-winds]
+                 {:current-round {:remaining-prevalent-wind remaining-prevalent-winds}})]
+    (is (not (last-round? (create winds))))
+    (is (not (last-round? (create (subvec winds 1)))))
+    (is (not (last-round? (create (subvec winds 2)))))
+    (is (last-round? (create (subvec winds 3))))))

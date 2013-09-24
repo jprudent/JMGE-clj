@@ -1,30 +1,28 @@
 (def winds [:east :north :west :south ])
 (def all-tiles (into [:fp :fo :fc :fb :ss :su :sa :sw ]
-                     (flatten (take 4 (repeat [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9
-                                      :c1 :c2 :c3 :c4 :c5 :c6 :c7 :c8 :c9
-                                      :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9
-                                      :we :wn :ww :ws :dr :dg :dw ])))))
+                 (flatten (take 4 (repeat [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 :c7 :c8 :c9 :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9 :we :wn :ww :ws :dr :dg :dw ])))))
 
 (defrecord Turn [player player-states])
 
 (defn init-turn [player-turn] (->Turn player-turn {}))
 
 
-(defrecord Hand [current-turn wall player-hands discarded fans])
+(defrecord Hand [current-turn wall player-hands discarded fans remaining-dealers])
 
 (defn- init-hand [player-turn]
-  (->Hand (init-turn player-turn) nil nil {:east [] :north [] :west [] :south []} {:east [] :north [] :west [] :south []}))
+  (let [empty-map {:east [] :north [] :west [] :south []}]
+    (->Hand (init-turn player-turn) nil nil empty-map empty-map empty-map)))
 
 (defn- give-13-tiles [{:keys [player-hands wall] :as hand} to-player]
   (let [[new-wall new-player-hand] (move-tiles 13 wall (list))
         new-player-hands (assoc player-hands to-player new-player-hand)]
-       (assoc hand :player-hands new-player-hands, :wall new-wall)))
+    (assoc hand :player-hands new-player-hands, :wall new-wall)))
 
 (defn- initial-hands-and-wall [wall]
   (reduce give-13-tiles {:wall wall :player-hands {}} winds))
 
 (defn- new-hand [wall]
-  (merge (init-hand :east) (initial-hands-and-wall wall)))
+  (merge (init-hand :east ) (initial-hands-and-wall wall)))
 
 (defrecord Round [current-hand remaining-prevalent-wind])
 (defn- new-round [wall] (->Round (new-hand wall) winds))
@@ -35,7 +33,11 @@
 
 ;;; various accessors
 
-(defn get-hand [game] (:current-hand (:current-round game)))
+(defn get-round [game] (:current-round game))
+
+(defn get-hand [game] (:current-hand (get-round game)))
+
+(defn get-prevalent-wind [game] (first (:remaining-prevalent-wind (get-hand game))))
 
 (defn get-turn [game] (:current-turn (get-hand game)))
 
@@ -53,12 +55,15 @@
 
 (defn count-tiles-of-type [game player tile]
   (let [last-discarded (get-last-discarded game)
-          get-player-tiles #(get-player-tiles game player)
-          inc-if #(if %1 (inc %2) %2)]
-       (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles))))
+        get-player-tiles #(get-player-tiles game player)
+        inc-if #(if %1 (inc %2) %2)]
+    (reduce #(inc-if (= last-discarded %2) %1) 0 (get-player-tiles))))
 
 (defn get-player-discarded [game player] (player (:discarded (get-hand game))))
 
+(defn get-remaining-dealers [game] (:remaining-dealers (get-hand game)))
+
+(defn get-remaining-prevalent-wind [game] (:remaining-prevalent-wind (get-round game)))
 
 ;;; various tests
 
@@ -73,8 +78,8 @@
 (defn has-played-turn? [game player]
   (let [player-state (get-in game [:current-round :current-hand :current-turn :player-states player])]
     (or
-     (not (nil? (some #(= % player-state) [:wait-next-turn :pung :kong :hule])))
-     (and (vector? player-state) ( = :chow (first player-state))))))
+      (not (nil? (some #(= % player-state) [:wait-next-turn :pung :kong :hule ])))
+      (and (vector? player-state) (= :chow (first player-state))))))
 
 (defn end-turn? [game] (every? #(has-played-turn? game %) (get-not-player-turnz game)))
 
@@ -87,7 +92,7 @@
 
 (defn family [tile] ((tile-to-char-seq tile) 1))
 
-(defn order [tile]  (char-to-int ((tile-to-char-seq tile) 2)))
+(defn order [tile] (char-to-int ((tile-to-char-seq tile) 2)))
 
 (defn to-tile [family order] (keyword (str family order)))
 
@@ -98,9 +103,13 @@
         order (order last-discarded)
         proposed-chow (conj owned-tiles last-discarded)
         to-chow (fn [orders] (conj
-                              (reduce #(conj %1 (to-tile expected-family (+ order %2))) #{} orders)
-                              last-discarded)) ]
+                               (reduce #(conj %1 (to-tile expected-family (+ order %2))) #{} orders)
+                               last-discarded))]
     (not (nil? (some #(= proposed-chow %1) (map to-chow [[-2 -1] [-1 1] [1 2]]))))))
+
+(defn valid-hule?
+  "TODO proper implementation"
+  [hule-details] true)
 
 (defn create-fan [type & tiles]
   (into [type] (sort tiles)))
@@ -126,11 +135,11 @@
 (defn- update-players-states
   "Update the states of all players"
   [new-players-states game]
-  (assoc-in game [:current-round :current-hand :current-turn :player-states] new-players-states))
+  (assoc-in game [:current-round :current-hand :current-turn :player-states ] new-players-states))
 
 (defn- update-turn [new-turn game]
   "Replace the current turn of the game"
-  (assoc-in game [:current-round :current-hand :current-turn] new-turn))
+  (assoc-in game [:current-round :current-hand :current-turn ] new-turn))
 
 (defn- update-round [new-round game]
   (assoc game :current-round new-round))
@@ -145,16 +154,16 @@
   - game: the game with a tile drawed by player-turn"
 
   ([hand to-player]
-  (let [player-hands (:player-hands hand)
-        player-hand (to-player player-hands)
-        wall (:wall hand)
-        tile-move {:source wall :destination player-hand}
-        {new-wall :source new-hand :destination} (move-tile tile-move)
-        hand-with-updated-wall (assoc hand :wall new-wall)]
-    (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
+    (let [player-hands (:player-hands hand)
+          player-hand (to-player player-hands)
+          wall (:wall hand)
+          tile-move {:source wall :destination player-hand}
+          {new-wall :source new-hand :destination} (move-tile tile-move)
+          hand-with-updated-wall (assoc hand :wall new-wall)]
+      (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
 
   ([game]
-   (update-in game [:current-round :current-hand] draw-tile (get-player-turn game))))
+    (update-in game [:current-round :current-hand ] draw-tile (get-player-turn game))))
 
 (defn- remove-from-player-tiles [player nb tile game]
   (let [tiles-to-remove (into [] (take nb (repeat tile)))

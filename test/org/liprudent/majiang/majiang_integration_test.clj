@@ -28,6 +28,13 @@
   (let [all-wished (into [] (apply concat wished-player-hands))]
     (into all-wished (minus all-tiles all-wished))))
 
+(defn start-game-events [wall]
+  [(->PlayerJoined aggregate-id)
+   (->PlayerJoined aggregate-id)
+   (->PlayerJoined aggregate-id)
+   (->PlayerJoined aggregate-id)
+   (->GameStarted aggregate-id 6 6 wall)])
+
 (deftest four-people-joining
   (let [cmd-enter (->NewPlayerEnter aggregate-id)]
 
@@ -64,11 +71,7 @@
 (deftest player-turn
   (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         crooked-wall (mk-crooked-wall wished-east-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)]]
+        events (start-game-events crooked-wall)]
 
     (in-game events)
 
@@ -100,12 +103,8 @@
 (deftest auction-pass
   (let [wished-east-tiles [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         crooked-wall (mk-crooked-wall wished-east-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b1 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b1 ))]
 
     (in-game events)
 
@@ -127,12 +126,8 @@
         wished-north-tiles [:b1 #_ _ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 ]
         wished-west-tiles [:b1 :b2, :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b2 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b2 ))]
 
     (in-game events)
 
@@ -154,12 +149,8 @@
         wished-north-tiles [:b1 #_ ________ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 ]
         wished-west-tiles [:b1 :b2 :b2 :b2 #_ ____ :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b2 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b2 ))]
 
     (in-game events)
 
@@ -180,12 +171,8 @@
         wished-north-tiles [:b1 #_ ________ :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 ]
         wished-west-tiles [:b1 :b2 :b2 :b2 #_ ____ :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b2 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b2 ))]
 
     (in-game events)
 
@@ -202,12 +189,8 @@
       (is (= :kong (get-player-state game :west ))))))
 
 (deftest auction-all-passed
-  (let [events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 all-tiles)
-                (->TileDiscarded aggregate-id :east :b3 )]]
+  (let [events (conj (start-game-events all-tiles)
+                 (->TileDiscarded aggregate-id :east :b1 ))]
 
     (in-game events)
 
@@ -227,12 +210,8 @@
         wished-north-tiles [:b1 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         wished-west-tiles [:b3 :b3 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b3 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b3 ))]
 
     (in-game events)
 
@@ -254,12 +233,8 @@
         wished-north-tiles [:b1 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         wished-west-tiles [:b3 :b3 :b3 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b3 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b3 ))]
 
     (in-game events)
 
@@ -282,12 +257,8 @@
         wished-north-tiles [:b1 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         wished-west-tiles [:b3 :b3 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 ]
         crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
-        events [(->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->PlayerJoined aggregate-id)
-                (->GameStarted aggregate-id 6 6 crooked-wall)
-                (->TileDiscarded aggregate-id :east :b3 )]]
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b3 ))]
 
     (in-game events)
 
@@ -299,7 +270,37 @@
     (let [game (replay-all aggregate-id)]
       (is (= :north (get-player-turn game)))
       (is (= 11 (count (get-player-tiles game :north ))))
-      (is (every? #(not (tile-owned? game :north %)) (list :b3 :b4 :b5 )))
+      (is (not-any? #(tile-owned? game :north %) (list :b3 :b4 :b5 )))
       (is (has-fan? game :north (create-fan :chow :b3 :b4 :b5 )))
       (is (can-discard? game :north ))
-      (is (every? #(not (can-auction? game %)) (minus winds [:north]))))))
+      (is (every? #(not (can-auction? game %)) (minus winds [:north ]))))))
+
+
+
+(comment deftest auction-chow-hule-compete
+  (let [wished-east-tiles [:b3 :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9 :s1 :s2 :s3 ]
+        wished-north-tiles [:b4 :b5 :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9 :s1 :s2 ]
+        wished-west-tiles [:b3 :b3 :b5 :b5 :b5 :b6 :b6 :b6 :b7 :b7 :b7 :b8 :b8 ]
+        crooked-wall (mk-crooked-wall wished-east-tiles wished-north-tiles wished-west-tiles)
+        events (conj (start-game-events crooked-wall)
+                 (->TileDiscarded aggregate-id :east :b3 ))]
+
+    (in-game events)
+
+    (handle-command (->Chow aggregate-id :north #{:b4 :b5 }) in-memory-event-store)
+    (handle-command (->Pass aggregate-id :south ) in-memory-event-store)
+    (handle-command (->Hule aggregate-id :west ) in-memory-event-store)
+
+    ;a new hand is launched
+    (let [game (replay-all aggregate-id)
+          round (get-round game)
+          hand (get-hand game)]
+      (is (= :north (get-player-turn game)) "hand wind changed")
+      (is (= [:east :north :west :south ] (:remaining-prevalent-wind round)))
+      (is (= [:north :west :south ] (:remaining-prevalent-wind hand)))
+      (is (= (- (- 144 (* 13 4)) 1) (count (:wall hand))))
+      (is (= 14 (count (get-player-tiles :north game))))
+      (is (= 13 (count (get-player-tiles :west game))))
+      (is (= 13 (count (get-player-tiles :south game))))
+      (is (= 13 (count (get-player-tiles :east game)))))))
+
