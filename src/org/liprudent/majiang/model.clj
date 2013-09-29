@@ -43,6 +43,8 @@
 
 (defn get-player-tiles [game player] (player (:player-hands (get-hand game))))
 
+(defn get-player-fans [game player] (player (:fans (get-hand game))))
+
 (defn get-player-state [game player] (get-in (get-turn game) [:player-states player]))
 
 (defn get-player-turn [game] (:player (get-turn game)))
