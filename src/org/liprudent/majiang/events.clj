@@ -1,3 +1,8 @@
+(ns org.liprudent.majiang.events
+  (:require [org.liprudent.majiang.event-sourcing :as es]
+            [org.liprudent.majiang.model :as m]
+            [org.liprudent.majiang.utils :as u]))
+
 (defrecord PlayerJoined [aggregate-id])
 (defrecord GameStarted [aggregate-id dice-thown-1 dice-thrown-2 wall])
 (defrecord TileDiscarded [aggregate-id player tile])
@@ -9,54 +14,54 @@
 
 ;;; PlayerJoined
 
-(defmethod apply-event PlayerJoined
+(defmethod es/apply-event PlayerJoined
   [game event]
-  (inc-nb-active-players game))
+  (m/inc-nb-active-players game))
 
 ;;; GameStarted
 
-(defmethod apply-event GameStarted
+(defmethod es/apply-event GameStarted
   [game {wall :wall}]
   (->> game
-    (update-round (new-round wall))
-    (draw-tile)))
+    (m/update-round (m/new-round wall))
+    (m/draw-tile)))
 
 ;;; TileDiscarded
 
-(defmethod apply-event TileDiscarded
+(defmethod es/apply-event TileDiscarded
   [game {player :player discarded-tile :tile}]
 
-  (let [new-player-discarded (conj (get-player-discarded game player) discarded-tile)
-        new-player-tiles (minus (get-player-tiles game player) [discarded-tile])
-        new-players-states (reduce #(assoc %1 %2 (if (= player %2) :wait-next-turn :auction )) {} winds)]
+  (let [new-player-discarded (conj (m/get-player-discarded game player) discarded-tile)
+        new-player-tiles (u/minus (m/get-player-tiles game player) [discarded-tile])
+        new-players-states (reduce #(assoc %1 %2 (if (= player %2) :wait-next-turn :auction )) {} m/winds)]
     (->> game
-      (update-player-discarded player new-player-discarded)
-      (update-player-tiles player new-player-tiles)
-      (update-players-states new-players-states))))
+      (m/update-player-discarded player new-player-discarded)
+      (m/update-player-tiles player new-player-tiles)
+      (m/update-players-states new-players-states))))
 
 
 (defn- all-passed
   "Update the game when all players passed for the discarded tile"
   [game & _]
-  {:pre [(every? #(= :wait-next-turn (get-player-state game %)) winds)]}
+  {:pre [(every? #(= :wait-next-turn (m/get-player-state game %)) m/winds)]}
 
-  (let [new-turn (init-turn (get-next-player game))]
+  (let [new-turn (m/init-turn (m/get-next-player game))]
     (->> game
-      (update-turn new-turn)
-      (draw-tile))))
+      (m/update-turn new-turn)
+      (m/draw-tile))))
 
 (defn- pungished
   [game player auction]
   (let [nb-tiles (if (= auction :pung ) 2 3)
-        last-discarded (get-last-discarded game)
-        player-turn (get-player-turn game)
-        new-fan (create-fan auction last-discarded)
-        new-turn (init-turn player)]
+        last-discarded (m/get-last-discarded game)
+        player-turn (m/get-player-turn game)
+        new-fan (m/create-fan auction last-discarded)
+        new-turn (m/init-turn player)]
     (->> game
-      (remove-from-player-tiles player nb-tiles last-discarded)
-      (remove-last-discarded)
-      (add-player-fan player new-fan)
-      (update-turn new-turn))))
+      (m/remove-from-player-tiles player nb-tiles last-discarded)
+      (m/remove-last-discarded)
+      (m/add-player-fan player new-fan)
+      (m/update-turn new-turn))))
 
 
 (defn- punged
@@ -67,24 +72,24 @@
 (defn- konged
   "Update the game when a player konged"
   [game player]
-  (draw-tile (pungished game player :kong )))
+  (m/draw-tile (pungished game player :kong )))
 
 (defn- chowed
   "Update the game when a player chowed"
   [game player]
 
-  (let [[t1 t2 :as tiles] (seq ((get-player-state game player) 1))
-        last-discarded (get-last-discarded game)
-        player-turn (get-player-turn game)
-        new-fan (create-fan :chow last-discarded t1 t2)
-        new-turn (init-turn player)]
+  (let [[t1 t2 :as tiles] (seq ((m/get-player-state game player) 1))
+        last-discarded (m/get-last-discarded game)
+        player-turn (m/get-player-turn game)
+        new-fan (m/create-fan :chow last-discarded t1 t2)
+        new-turn (m/init-turn player)]
 
     (->> game
-      (remove-from-player-tiles player 1 t1)
-      (remove-from-player-tiles player 1 t2)
-      (remove-last-discarded)
-      (add-player-fan player new-fan)
-      (update-turn new-turn))))
+      (m/remove-from-player-tiles player 1 t1)
+      (m/remove-from-player-tiles player 1 t2)
+      (m/remove-last-discarded)
+      (m/add-player-fan player new-fan)
+      (m/update-turn new-turn))))
 
 
 
@@ -100,11 +105,11 @@
     (if a-is-greater a b)))
 
 (defn- apply-max-auction [game]
-  (let [prepend-player-to-state #(into [%] (flatten [(get-player-state game %)]))
-        prepended-player-to-states (map prepend-player-to-state (get-not-player-turnz game))
+  (let [prepend-player-to-state #(into [%] (flatten [(m/get-player-state game %)]))
+        prepended-player-to-states (map prepend-player-to-state (m/get-not-player-turnz game))
         find-max-auction (fn [] (reduce greater-auction prepended-player-to-states))]
 
-    (if (end-turn? game)
+    (if (m/end-turn? game)
       (let [[player state & _] (find-max-auction)]
         ((state {:wait-next-turn all-passed ;todo multimethod
                  :chow chowed
@@ -116,7 +121,7 @@
 
 ;;; Passed
 
-(defmethod apply-event Passed
+(defmethod es/apply-event Passed
   [game {player :player}]
   (let [update-player-turn-state #(assoc-in %
                                     [:current-round :current-hand :current-turn :player-states player]
@@ -131,20 +136,20 @@
 
 ;;; Chowed
 
-(defmethod apply-event Chowed
+(defmethod es/apply-event Chowed
   [game {player :player owned-tiles :owned-tiles}]
   (update-state-auctioned game player [:chow owned-tiles]))
 
 ;;; Punged
 
-(defmethod apply-event Punged
+(defmethod es/apply-event Punged
   [game {player :player}]
   (update-state-auctioned game player :pung ))
 
 
 ;;; Konged
 
-(defmethod apply-event Konged
+(defmethod es/apply-event Konged
   [game {player :player}]
   (update-state-auctioned game player :kong ))
 
@@ -152,14 +157,14 @@
 
 (defn last-hand?
   [game]
-  (= (get-remaining-dealers game) [:south ]))
+  (= (m/get-remaining-dealers game) [:south ]))
 
 (defn last-round?
   [game]
-  (= (get-remaining-prevalent-wind game) [:south ]))
+  (= (m/get-remaining-prevalent-wind game) [:south ]))
 
 (defn end-game? [game] (and (last-hand? game) (last-round? game)))
 
-(defmethod apply-event Huled
+(defmethod es/apply-event Huled
   [game {player :player}]
   )

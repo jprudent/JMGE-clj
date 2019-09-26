@@ -1,6 +1,4 @@
-(defprotocol CommandHandler
-  ;"A protocol for command handling. Each command have to extend this protocol"
-  (perform [this game]))
+(ns org.liprudent.majiang.event-sourcing)
 
 (defmulti apply-event
   ;"A multimethod for handling events. Each event has his own method defined"

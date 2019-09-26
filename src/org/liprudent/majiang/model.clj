@@ -1,3 +1,6 @@
+(ns org.liprudent.majiang.model
+  (:require [org.liprudent.majiang.utils :as u]))
+
 (def winds [:east :north :west :south ])
 (def all-tiles (into [:fp :fo :fc :fb :ss :su :sa :sw ]
                  (flatten (take 4 (repeat [:b1 :b2 :b3 :b4 :b5 :b6 :b7 :b8 :b9 :c1 :c2 :c3 :c4 :c5 :c6 :c7 :c8 :c9 :s1 :s2 :s3 :s4 :s5 :s6 :s7 :s8 :s9 :we :wn :ww :ws :dr :dg :dw ])))))
@@ -14,7 +17,7 @@
     (->Hand (init-turn player-turn) nil nil empty-map empty-map empty-map)))
 
 (defn- give-13-tiles [{:keys [player-hands wall] :as hand} to-player]
-  (let [[new-wall new-player-hand] (move-tiles 13 wall (list))
+  (let [[new-wall new-player-hand] (u/move-tiles 13 wall (list))
         new-player-hands (assoc player-hands to-player new-player-hand)]
     (assoc hand :player-hands new-player-hands, :wall new-wall)))
 
@@ -25,7 +28,7 @@
   (merge (init-hand :east ) (initial-hands-and-wall wall)))
 
 (defrecord Round [current-hand remaining-prevalent-wind])
-(defn- new-round [wall] (->Round (new-hand wall) winds))
+(defn new-round [wall] (->Round (new-hand wall) winds))
 
 (defrecord Game [current-round nb-active-players])
 (def empty-game (->Game nil 0))
@@ -49,7 +52,7 @@
 
 (defn get-player-turn [game] (:player (get-turn game)))
 
-(defn get-not-player-turnz [game] (minus winds [(get-player-turn game)]))
+(defn get-not-player-turnz [game] (u/minus winds [(get-player-turn game)]))
 
 (defn get-last-discarded [game] (last (get-in (get-hand game) [:discarded (get-player-turn game)])))
 
@@ -121,32 +124,32 @@
 
 ; note : all update functions end with the game parameter so that one can use ->>
 
-(defn- inc-nb-active-players [game]
+(defn inc-nb-active-players [game]
   (assoc game :nb-active-players (inc (:nb-active-players game))))
 
-(defn- update-player-discarded
+(defn update-player-discarded
   "Update discarded tiles of player"
   [player new-player-discarded game]
   (assoc-in game [:current-round :current-hand :discarded player] new-player-discarded))
 
-(defn- update-player-tiles
+(defn update-player-tiles
   "Update the tiles of player"
   [player new-player-tiles game]
   (assoc-in game [:current-round :current-hand :player-hands player] new-player-tiles))
 
-(defn- update-players-states
+(defn update-players-states
   "Update the states of all players"
   [new-players-states game]
   (assoc-in game [:current-round :current-hand :current-turn :player-states ] new-players-states))
 
-(defn- update-turn [new-turn game]
+(defn update-turn [new-turn game]
   "Replace the current turn of the game"
   (assoc-in game [:current-round :current-hand :current-turn ] new-turn))
 
-(defn- update-round [new-round game]
+(defn update-round [new-round game]
   (assoc game :current-round new-round))
 
-(defn- draw-tile
+(defn draw-tile
 
   "2 parameters :
   - hand is :current-hand
@@ -160,23 +163,23 @@
           player-hand (to-player player-hands)
           wall (:wall hand)
           tile-move {:source wall :destination player-hand}
-          {new-wall :source new-hand :destination} (move-tile tile-move)
+          {new-wall :source new-hand :destination} (u/move-tile tile-move)
           hand-with-updated-wall (assoc hand :wall new-wall)]
       (assoc-in hand-with-updated-wall [:player-hands to-player] new-hand)))
 
   ([game]
     (update-in game [:current-round :current-hand ] draw-tile (get-player-turn game))))
 
-(defn- remove-from-player-tiles [player nb tile game]
+(defn remove-from-player-tiles [player nb tile game]
   (let [tiles-to-remove (into [] (take nb (repeat tile)))
-        new-player-tiles (minus (get-player-tiles game player) tiles-to-remove)]
+        new-player-tiles (u/minus (get-player-tiles game player) tiles-to-remove)]
     (update-player-tiles player new-player-tiles game)))
 
-(defn- remove-last-discarded [game]
+(defn remove-last-discarded [game]
   (let [player-turn (get-player-turn game)
         new-player-turn-discarded (pop (get-player-discarded game player-turn))]
     (update-player-discarded player-turn new-player-turn-discarded game)))
 
-(defn- add-player-fan [player fan game]
+(defn add-player-fan [player fan game]
   (update-in game [:current-round :current-hand :fans player] conj fan))
 
