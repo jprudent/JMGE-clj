@@ -18,13 +18,18 @@
 
 (defn ceil [x] (int (Math/ceil x)))
 
+(defn ->fan [[t1 t2 t3 :as fan]]
+  (case (count fan)
+    2 [:pair t1]
+    3 (if (= t1 t2) [:pung t1] [:chow t1 t2 t3])))
+
 (defn find-valid-patterns
   "given a set of tiles, return all possible sets of patterns"
   [tiles]
   (let [nb-fans (ceil (/ (count tiles) 3))]
-    (filter
-      #(every? (some-fn pair? pung? chow?) %)
-      (combo/partitions (sort tiles) :min nb-fans :max nb-fans))))
+    (->> (combo/partitions (sort tiles) :min nb-fans :max nb-fans)
+         (filter #(every? (some-fn pair? pung? chow?) %))
+         (map #(map ->fan %)))))
 
 (defn valid-pattern?
   "returns true if tiles can be arranged as a set of valid patterns"
