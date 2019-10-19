@@ -54,7 +54,6 @@
   [game player auction]
   (let [nb-tiles (if (= auction :pung ) 2 3)
         last-discarded (m/get-last-discarded game)
-        player-turn (m/get-player-turn game)
         new-fan (m/create-fan auction last-discarded)
         new-turn (m/init-turn player)]
     (->> game

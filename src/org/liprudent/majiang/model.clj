@@ -171,6 +171,7 @@
     (update-in game [:current-round :current-hand ] draw-tile (get-player-turn game))))
 
 (defn remove-from-player-tiles [player nb tile game]
+  "remove nb similar tiles from player's hand"
   (let [tiles-to-remove (into [] (take nb (repeat tile)))
         new-player-tiles (u/minus (get-player-tiles game player) tiles-to-remove)]
     (update-player-tiles player new-player-tiles game)))
