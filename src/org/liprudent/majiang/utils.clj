@@ -12,7 +12,8 @@
   "substract 2 vectors, v2 must be a subset of v1"
   (reduce (fn [acc v]
             (let [index (.indexOf acc v)]
-              (into (subvec acc 0 index) (subvec acc (inc index))))) v1 v2))
+              (into (subvec acc 0 index) (subvec acc (inc index)))))
+          v1 v2))
 
 (defn move-tile
   "move a tile from source to destination"
