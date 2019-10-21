@@ -3,7 +3,8 @@
   (:require [org.liprudent.majiang.scoring.core :as sut]
             [org.liprudent.majiang.model :as m]
             [clojure.set :as set]
-            [org.liprudent.majiang.utils :as u]))
+            [org.liprudent.majiang.utils :as u]
+            [org.liprudent.majiang.scoring.fans :as fans]))
 
 (deftest valid-pattern?-test
   (is (sut/valid-pattern? [:b5 :b5]))
@@ -34,172 +35,56 @@
                                    :b2 :b2 :b2
                                    :b3 :b3 :b3
                                    :s1 :s1 :s1
-                                   :s2 :s2]))))
+                                   :s2 :s2])))
+  (is (= #{[[:pair :b1]
+            [:pair :c2]
+            [:pair :s3]
+            [:pair :ww]
+            [:pair :we]
+            [:pair :wn]
+            [:pair :dr]]}
+         (sut/find-valid-patterns (shuffle [:b1 :b1
+                                            :c2 :c2
+                                            :s3 :s3
+                                            :ww :ww
+                                            :we :we
+                                            :wn :wn
+                                            :dr :dr]))))
 
-(defn having-pungs-or-kongs
-  [& tiles]
-  (fn [{:keys [pungs-or-kongs]}]
-    (= (set tiles)
-       (set/intersection (set (map second pungs-or-kongs))
-                         (set tiles)))))
-
-(defn only-tiles
-  [& allowed-tiles]
-  (fn [{:keys [all-tiles]}]
-    (= (set all-tiles)
-       (set/intersection (set allowed-tiles)
-                         (set all-tiles)))))
-
-(defn fully-concealed?
-  [{:keys [hand]}]
-  (= 5 (count hand)))
-
-(defn families
-  [tiles]
-  (map m/family tiles))
-
-(defn full-flush?
-  [{:keys [all-tiles]}]
-  (= 1 (count (set (families all-tiles)))))
-
-(defn min-occurence
-  [tiles min-occurences]
-  (let [freq (frequencies (map m/order tiles))]
-    (->> (merge-with - freq min-occurences)
-         (vals)
-         (every? nat-int?))))
-(defn nine-gates
-  [{:keys [all-tiles] :as context}]
-  (and (fully-concealed? context)
-       (full-flush? context)
-       (min-occurence all-tiles
-                      {1 3, 2 1, 3 1, 4 1, 5 1, 6 1, 7 1, 8 1, 9 3})))
-
-
-(def fans
-  {:big-four-winds
-   {:name        "Big four winds"
-    :description "Pungs or Kongs of all four Wind Tiles"
-    :points      88
-    :predicate   (having-pungs-or-kongs :we :ws :ww :wn)
-    :exclusions  [:big-three-winds
-                  :all-pungs
-                  :prevalent-wind
-                  :seat-wind
-                  :pung-of-terminals-or-honors]}
-   :big-three-dragons
-   {:name        "Big three dragons"
-    :description "Pungs or Kongs of all three Dragon tiles"
-    :points      88
-    :predicate   (having-pungs-or-kongs :dr :dw :dg)
-    :exclusions  [:two-dragons
-                  :dragon-pung]}
-
-   :all-green
-   {:name        "All green"
-    :description "Hand is composed entirely of any of the 2, 3, 4, 6, 8 of Bamboo and Green Dragon"
-    :points      88
-    :predicate   (only-tiles :b2 :b3 :b4 :b6 :b8 :dg)}
-
-   :nine-gates
-   {:name        "Nine gates"
-    :description "Holding the 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9 tiles in one suit, creating the nine-sided wait of 1, 2, 3, 4, 5, 6, 7, 8, 9."
-    :points      88
-    :predicate   nine-gates
-    :exclusions  [:full-flush
-                  :concealed-hand
-                  :pung-of-terminals-or-honors]}})
-
-
-
-(def pair? (comp #{:pair} first))
-(def pung? (comp #{:pung} first))
-(def kong? (comp #{:kong} first))
-(def chow? (comp #{:chow} first))
-
-(defn all-pungs
-  [game]
-  (into (filter pung? (:hand game))
-        (filter pung? (:fans game))))
-
-(defn all-kongs
-  [game]
-  (into (filter kong? (:fans game))
-        (:concealed-kongs game)))
-
-(defn all-pairs
-  [game]
-  (filter pair? (:hand game)))
-
-(defn all-chows
-  [game]
-  (into (filter chow? (:hand game))
-        (filter chow? (:fans game))))
-
-(defn fan->tiles
-  [[fan-type t1 t2 t3]]
-  (case fan-type
-    :pung [t1 t1 t1]
-    :chow [t1 t2 t3]
-    :pair [t1 t1]
-    :kong [t1 t1 t1 t1]))
-
-(defn all-tiles
-  [& fans]
-  (sort (mapcat fan->tiles (reduce into fans))))
-
-(defn scoring
-  [game]
-  (doall (for [hand (sut/find-valid-patterns (:hand game))
-               :let [game           (assoc game :hand hand)
-                     pungs          (all-pungs game)
-                     kongs          (all-kongs game)
-                     pungs-or-kongs (into pungs kongs)
-                     pairs          (all-pairs game)
-                     chows          (all-chows game)
-                     all-tiles      (all-tiles pungs-or-kongs pairs chows)
-                     context        {:game           game
-                                     :hand           hand
-                                     :pungs          pungs
-                                     :kongs          kongs
-                                     :pairs          pairs
-                                     :pungs-or-kongs pungs-or-kongs
-                                     :chows          chows
-                                     :all-tiles      all-tiles}]]
-           (doall (for [fan fans
-                        :let [[_k {:keys [predicate] :as r}] fan]
-                        :when (predicate context)]
-                    r)))))
+  (is (= #{[[:knitted
+             :b2 :b5 :c1 :c7 :dg :dr :dw :s3 :s6 :s9 :we :wn :ws :ww]]}
+         (sut/find-valid-patterns (shuffle [:dr :dg :dw :we :ws :ww :wn
+                                            :c1 :c7 :b2 :b5 :s3 :s6 :s9])))))
 
 (deftest scoring-test
 
-  (is (= [[(:big-four-winds fans)]]
-         (scoring
+  (is (= [[(:big-four-winds fans/fans)]]
+         (sut/scoring
            {:hand           [:ws :ws :ws
                              :ww :ww :ww
                              :wn :wn :wn
-                             :dr :dr]
+                             :b3 :b3]
             :fans           [[:pung :we]]
             :out            [:ws :discarded]
             :wind           :we
             :prevalent-wind :we
             :seat-wind      :ws})))
 
-  (is (= [[(:big-three-dragons fans)]]
-         (scoring
+  (is (= [[(:big-three-dragons fans/fans)]]
+         (sut/scoring
            {:hand           [:dr :dw :dg
                              :dr :dw :dg
                              :dr :dw :dg
-                             :s1 :s1]
+                             :s3 :s3]
             :fans           [[:pung :we]]
-            :out            [:s1 :discarded]
+            :out            [:s3 :discarded]
             :wind           :we
             :prevalent-wind :we
             :seat-wind      :ws})))
 
-  (is (= [[(:all-green fans)]
-          [(:all-green fans)]]
-         (scoring
+  (is (= [[(:all-green fans/fans)]
+          [(:all-green fans/fans)]]
+         (sut/scoring
            {:hand           [:b2 :b3 :b4
                              :b2 :b3 :b4
                              :b2 :b3 :b4
@@ -210,14 +95,231 @@
             :prevalent-wind :we
             :seat-wind      :ws})))
 
-  (is (= [[(:nine-gates fans)]]
-         (scoring
+  (is (= [[(:nine-gates fans/fans)]]
+         (sut/scoring
            {:hand           [:b1 :b1 :b1
                              :b2 :b3 :b4 :b5 :b6 :b7 :b8
                              :b9 :b9 :b9
                              :b6]
-            :fans           [[:pung :b8]]
+            :fans           []
             :out            [:b6 :discarded]
             :wind           :we
             :prevalent-wind :we
-            :seat-wind      :ws}))))
+            :seat-wind      :ws})))
+
+  (is (= [[(:four-kongs fans/fans)]]
+         (sut/scoring
+           {:hand            [:b1 :b1]
+            :fans            [[:kong :b7] [:kong :b8]]
+            :concealed-kongs [[:kong :s7] [:kong :s8]]
+            :out             [:b7 :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:full-flush fans/fans)]
+          [(:full-flush fans/fans)]
+          [(:seven-shifted-pairs fans/fans)]
+          [(:full-flush fans/fans)]]
+         (sut/scoring
+           {:hand            [:b1 :b1 :b2 :b2 :b3 :b3
+                              :b4 :b4 :b5 :b5 :b6 :b6
+                              :b7 :b7]
+            :fans            []
+            :concealed-kongs []
+            :out             [:b6 :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:thirteen-orphans fans/fans)]]
+         (sut/scoring
+           {:hand            [:b1 :b9 :c1 :c9 :s1 :s9
+                              :dg :dr :dw
+                              :we :wn :ws :ww
+                              :b1]
+            :fans            []
+            :concealed-kongs []
+            :out             [:b9 :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:all-terminals fans/fans)]]
+         (sut/scoring
+           {:hand            [:s1 :s1 :s1
+                              :c9 :c9]
+            :fans            [[:pung :b1] [:pung :b9]]
+            :concealed-kongs [[:kong :s9]]
+            :out             [:b9 :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:little-four-winds fans/fans)]]
+         (sut/scoring
+           {:hand            [:we :we :b1 :b2 :b3]
+            :fans            [[:pung :ws] [:pung :ww]]
+            :concealed-kongs [[:kong :wn]]
+            :out             [:b9 :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:little-three-dragons fans/fans)]]
+         (sut/scoring
+           {:hand            [:dw :dw :b1 :b2 :b3]
+            :fans            [[:pung :dr] [:pung :dg]]
+            :concealed-kongs [[:kong :b1]]
+            :out             [:dw :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:all-honors fans/fans)]]
+         (sut/scoring
+           {:hand            [:dw :dw :we :we :we]
+            :fans            [[:pung :ww] [:pung :dg]]
+            :concealed-kongs [[:kong :ws]]
+            :out             [:dw :discarded]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:four-concealed-pungs fans/fans)]]
+         (sut/scoring
+           {:hand            [:dw :dw
+                              :we :we :we
+                              :b2 :b2 :b2
+                              :s5 :s5 :s5
+                              :dg :dg :dg]
+            :fans            []
+            :concealed-kongs []
+            :out             [:dw :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:pure-terminal-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:b5 :b5
+                              :b1 :b2 :b3
+                              :b7 :b8 :b9]
+            :fans            [[:chow :b1 :b2 :b3]
+                              [:chow :b7 :b8 :b9]]
+            :concealed-kongs []
+            :out             [:dw :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:quadruple-chow fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :b1 :b2 :b3]
+            :fans            [[:chow :b1 :b2 :b3]
+                              [:chow :b1 :b2 :b3]
+                              [:chow :b1 :b2 :b3]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:four-pure-shifted-pungs fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c5 :c5 :c5]
+            :fans            [[:pung :c6]
+                              [:kong :c7]]
+            :concealed-kongs [[:kong :c8]]
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:four-shifted-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c1 :c2 :c3]
+            :fans            [[:chow :c3 :c4 :c5]           ;; a shift by 2
+                              [:chow :c5 :c6 :c7]
+                              [:chow :c7 :c8 :c9]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:three-kongs fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c1 :c2 :c3]
+            :fans            [[:kong :c4]
+                              [:kong :dr]]
+            :concealed-kongs [[:kong :b1]]
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:all-terminals-and-honors fans/fans)]]
+         (sut/scoring
+           {:hand            [:s1 :s1
+                              :dr :dr :dr]
+            :fans            [[:kong :ww]
+                              [:pung :c9]]
+            :concealed-kongs [[:kong :b1]]
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:seven-pairs fans/fans)]]
+         (sut/scoring
+           {:hand            [:b2 :b2
+                              :b3 :b3
+                              :b7 :b7
+                              :dr :dr
+                              :c2 :c2
+                              :c1 :c1
+                              :c8 :c8]
+            :fans            []
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:greater-honors-and-knitted-tiles fans/fans)]]
+         (sut/scoring
+           {:hand            [:dr :dg :dw :we :ws :ww :wn
+                              :c1 :c7 :b2 :b5 :s3 :s6 :s9]
+            :fans            []
+            :concealed-kongs []
+            :out             [:c1 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:all-even-pungs fans/fans)]]
+         (sut/scoring
+           {:hand            [:s2 :s2
+                              :b4 :b4 :b4]
+            :fans            [[:pung :b6] [:kong :c2]]
+            :concealed-kongs [[:kong :s8]]
+            :out             [:s2 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:full-flush fans/fans)]]
+         (sut/scoring
+           {:hand            [:b2 :b2
+                              :b4 :b4 :b4]
+            :fans            [[:pung :b6] [:chow :b6 :b7 :b8]]
+            :concealed-kongs [[:kong :b8]]
+            :out             [:s2 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws}))))
