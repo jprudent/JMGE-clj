@@ -70,9 +70,12 @@
                (constantly 1)))
 
 (defn all-equals
-  []
-  (having-pred identity
-               (fn [a b] (and (= a b) a))))
+  ([] (having-pred identity
+                   (fn [a b] (and (= a b) a))))
+  ([n]
+   (having-pred #(some (fn [[_ nb]] (>= nb n)) %)
+                (fn [freqs fan] (update freqs fan (fnil inc 0)))
+                (fn [fan] {fan 1}))))
 
 (defn same-family
   []
@@ -116,7 +119,7 @@
 (defn suits
   []
   (let [suit-tile? (complement m/honors)
-        suit-fan? (fn [[_ & tiles]] (every? suit-tile? tiles))]
+        suit-fan?  (fn [[_ & tiles]] (every? suit-tile? tiles))]
     (having-pred
       identity
       (fn [past-result fan]
@@ -284,7 +287,10 @@
     :predicate   (having :chows (nb= 4) (all-equals))
     :exclusions  #{:pure-shifted-pungs
                    :tile-hog
-                   :pure-double-chow}}
+                   :pure-double-chow
+
+                   ;; exclusions I added
+                   :pure-triple-chow}}
 
    :four-pure-shifted-pungs
    {:key         :quadruple-chow
@@ -356,5 +362,13 @@
     :description "All the tiles are in the same suit."
     :points      24
     :predicate   (having :all-fans (suits) (same-family))
+    :exclusions  #{:no-honors}}
+
+   :pure-triple-chow
+   {:key         :pure-triple-chow
+    :name        "Pure triple chows"
+    :description "Three chows of the same numerical sequence and in the same suit."
+    :points      24
+    :predicate   (having :chows (all-equals 3))
     :exclusions  #{:no-honors}}
    })

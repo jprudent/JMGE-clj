@@ -83,7 +83,8 @@
             :seat-wind      :ws})))
 
   (is (= [[(:all-green fans/fans)]
-          [(:all-green fans/fans)]]
+          [(:pure-triple-chow fans/fans)
+           (:all-green fans/fans)]]
          (sut/scoring
            {:hand           [:b2 :b3 :b4
                              :b2 :b3 :b4
@@ -320,6 +321,19 @@
             :fans            [[:pung :b6] [:chow :b6 :b7 :b8]]
             :concealed-kongs [[:kong :b8]]
             :out             [:s2 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:pure-triple-chow fans/fans)]]
+         (sut/scoring
+           {:hand            [:dr :dr
+                              :s1 :s2 :s3]
+            :fans            [[:chow :b1 :b2 :b3]
+                              [:chow :b1 :b2 :b3]
+                              [:chow :b1 :b2 :b3]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
             :wind            :we
             :prevalent-wind  :we
             :seat-wind       :ws}))))
