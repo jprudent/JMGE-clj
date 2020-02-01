@@ -230,6 +230,7 @@
                                        :pungs-or-kongs  pungs-or-kongs
                                        :knitted         knitted
                                        :chows           chows
+                                       :distinct-chows  (set chows)
                                        :all-tiles       all-tiles
                                        :all-fans        all-fans
                                        :concealed-pungs concealed-pungs}]]

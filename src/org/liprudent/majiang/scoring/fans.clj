@@ -422,4 +422,12 @@
     :points      24
     :predicate   (only-tiles :b1 :b2 :b3 :c1 :c2 :c3 :s1 :s2 :s3)
     :exclusions  #{:no-honors}}
+
+   :pure-straight
+   {:key         :pure-straight
+    :name        "Pure straight"
+    :description "Hand using one of every number, 1-9, in three consecutive chows, in the same suit."
+    :points      16
+    :predicate   (having :distinct-chows (nb= 3) (same-family) (shifted 3 3))
+    :exclusions  #{:no-honors}}
    })

@@ -381,4 +381,18 @@
             :out             [:s8 :self-drawn]
             :wind            :we
             :prevalent-wind  :we
-            :seat-wind       :ws}))))
+            :seat-wind       :ws})))
+
+  (is (= [[(:full-flush fans/fans)
+           (:pure-straight fans/fans)]]
+           (sut/scoring
+             {:hand            [:c4 :c5 :c6
+                                :c7 :c8 :c9
+                                :c1 :c2 :c3
+                                :c7 :c7]
+              :fans            [[:chow :c1 :c2 :c3]]
+              :concealed-kongs []
+              :out             [:c8 :self-drawn]
+              :wind            :we
+              :prevalent-wind  :we
+              :seat-wind       :ws}))))
