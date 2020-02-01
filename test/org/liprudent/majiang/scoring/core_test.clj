@@ -339,24 +339,46 @@
             :seat-wind       :ws})))
 
   (is (= [[(:pure-shifted-pungs fans/fans)]]
-          (sut/scoring
-            {:hand            [:dr :dr
-                               :s1 :s2 :s3]
-             :fans            [[:pung :b4]
-                               [:kong :b5]]
-             :concealed-kongs [[:kong :b3]]
-             :out             [:s1 :self-drawn]
-             :wind            :we
-             :prevalent-wind  :we
-             :seat-wind       :ws})))
+         (sut/scoring
+           {:hand            [:dr :dr
+                              :s1 :s2 :s3]
+            :fans            [[:pung :b4]
+                              [:kong :b5]]
+            :concealed-kongs [[:kong :b3]]
+            :out             [:s1 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
 
   (is (= [[(:upper-tiles fans/fans)]]
-            (sut/scoring
-              {:hand            [:s7 :s8 :s9 :c9 :c9]
-               :fans            [[:pung :b7]
-                                 [:chow :b7 :b8 :b9]]
-               :concealed-kongs [[:kong :c8]]
-               :out             [:s8 :self-drawn]
-               :wind            :we
-               :prevalent-wind  :we
-               :seat-wind       :ws}))))
+         (sut/scoring
+           {:hand            [:s7 :s8 :s9 :c9 :c9]
+            :fans            [[:pung :b7]
+                              [:chow :b7 :b8 :b9]]
+            :concealed-kongs [[:kong :c8]]
+            :out             [:s8 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:middle-tiles fans/fans)]]
+         (sut/scoring
+           {:hand            [:s4 :s5 :s6 :c6 :c6]
+            :fans            [[:pung :b4]
+                              [:chow :b4 :b5 :b6]]
+            :concealed-kongs [[:kong :c5]]
+            :out             [:s8 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:lower-tiles fans/fans)]]
+         (sut/scoring
+           {:hand            [:s1 :s2 :s3 :c3 :c3]
+            :fans            [[:pung :b2]
+                              [:chow :b1 :b2 :b3]]
+            :concealed-kongs [[:kong :c2]]
+            :out             [:s8 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws}))))

@@ -404,4 +404,22 @@
     :description "Hand consisting entirely of 7, 8, and 9 tiles."
     :points      24
     :predicate   (only-tiles :b7 :b8 :b9 :c7 :c8 :c9 :s7 :s8 :s9)
-    :exclusions  #{:no-honors}}})
+    :exclusions  #{:no-honors}}
+
+   :middle-tiles
+   {:key         :middle-tiles
+    :name        "Middle tiles"
+    :description "Hand consisting entirely of 4, 5 and 6 tiles."
+    :points      24
+    :predicate   (only-tiles :b4 :b5 :b6 :c4 :c5 :c6 :s4 :s5 :s6)
+    :exclusions  #{:no-honors
+                   :all-simple}}
+
+   :lower-tiles
+   {:key         :lower-tiles
+    :name        "Lower tiles"
+    :description "Hand consisting entirely of 1, 2 and 3 tiles."
+    :points      24
+    :predicate   (only-tiles :b1 :b2 :b3 :c1 :c2 :c3 :s1 :s2 :s3)
+    :exclusions  #{:no-honors}}
+   })
