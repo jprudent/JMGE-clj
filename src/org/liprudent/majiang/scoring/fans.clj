@@ -397,4 +397,11 @@
     :points      24
     :predicate   (having :pungs-or-kongs (shifted 3 1))
     :exclusions  #{:pure-triple-chow}}
-   })
+
+   :upper-tiles
+   {:key         :upper-tiles
+    :name        "Upper tiles"
+    :description "Hand consisting entirely of 7, 8, and 9 tiles."
+    :points      24
+    :predicate   (only-tiles :b7 :b8 :b9 :c7 :c8 :c9 :s7 :s8 :s9)
+    :exclusions  #{:no-honors}}})
