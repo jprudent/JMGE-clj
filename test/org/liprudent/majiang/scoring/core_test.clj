@@ -1,9 +1,6 @@
 (ns org.liprudent.majiang.scoring.core-test
   (:require [clojure.test :refer :all])
   (:require [org.liprudent.majiang.scoring.core :as sut]
-            [org.liprudent.majiang.model :as m]
-            [clojure.set :as set]
-            [org.liprudent.majiang.utils :as u]
             [org.liprudent.majiang.scoring.fans :as fans]))
 
 (deftest valid-pattern?-test
@@ -406,6 +403,19 @@
                               [:chow :c7 :c8 :c9]]
             :concealed-kongs []
             :out             [:b5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:pure-shifted-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c1 :c2 :c3]
+            :fans            [[:chow :c3 :c4 :c5]           ;; a shift by 2
+                              [:chow :c5 :c6 :c7]
+                              [:chow :s7 :s8 :s9]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
             :wind            :we
             :prevalent-wind  :we
             :seat-wind       :ws}))))

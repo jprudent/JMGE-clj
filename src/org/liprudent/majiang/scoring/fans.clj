@@ -69,14 +69,6 @@
                (fn [sum _fan] (inc sum))
                (constantly 1)))
 
-(defn having-group-by
-  [k]
-  (fn [acc fan] (update acc (k fan) (fnil conj []) fan)))
-
-(defn having-group-by-init
-  [k]
-  (fn [fan] {(k fan) [fan]}))
-
 (defn all-equals
   ([] (having-pred identity
                    (fn [a b] (and (= a b) a))))
@@ -99,17 +91,17 @@
   ([nb-of-fans shift]
    (let [f-fan (comp m/family second)
          o-fan (comp m/order second)]
-     (having-pred (partial some (fn [[_family [fan & other-fans :as fans]]]
-                                  (and (= nb-of-fans (count fans))
-                                       (reduce (fn [last-order fan]
-                                                 (let [order-t2 (o-fan fan)]
-                                                   (and last-order
-                                                        (= shift (- order-t2 last-order))
-                                                        order-t2)))
-                                               (o-fan fan)
-                                               other-fans))))
-                  (having-group-by f-fan)
-                  (having-group-by-init f-fan)))))
+     (fn [fans]
+       (->> (group-by f-fan fans)
+            (some (fn [[_family [fan & other-fans :as fans]]]
+                    (and (= nb-of-fans (count fans))
+                         (reduce (fn [last-order fan]
+                                   (let [order-t2 (o-fan fan)]
+                                     (and last-order
+                                          (= shift (- order-t2 last-order))
+                                          order-t2)))
+                                 (o-fan fan)
+                                 other-fans)))))))))
 
 (defn at-least-one-of
   "at least one of the tiles"
@@ -453,4 +445,12 @@
                    :two-terminal-chows
                    :no-honors
                    :all-chows}}
+
+   :pure-shifted-chows
+   {:key         :pure-shifted-chows
+    :name        "Pure shifted chows"
+    :description "Three chows in one suit, each shifted up either one or two numbers from the last, but not acombination of both."
+    :points      16
+    :predicate   (having :chows (some-fn (shifted 3 1) (shifted 3 2)))
+    :exclusions  #{}}
    })
