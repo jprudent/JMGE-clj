@@ -385,14 +385,27 @@
 
   (is (= [[(:full-flush fans/fans)
            (:pure-straight fans/fans)]]
-           (sut/scoring
-             {:hand            [:c4 :c5 :c6
-                                :c7 :c8 :c9
-                                :c1 :c2 :c3
-                                :c7 :c7]
-              :fans            [[:chow :c1 :c2 :c3]]
-              :concealed-kongs []
-              :out             [:c8 :self-drawn]
-              :wind            :we
-              :prevalent-wind  :we
-              :seat-wind       :ws}))))
+         (sut/scoring
+           {:hand            [:c4 :c5 :c6
+                              :c7 :c8 :c9
+                              :c1 :c2 :c3
+                              :c7 :c7]
+            :fans            [[:chow :c1 :c2 :c3]]
+            :concealed-kongs []
+            :out             [:c8 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:three-suited-terminal-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:s1 :s2 :s3
+                              :s7 :s8 :s9
+                              :b5 :b5]
+            :fans            [[:chow :c1 :c2 :c3]
+                              [:chow :c7 :c8 :c9]]
+            :concealed-kongs []
+            :out             [:b5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws}))))

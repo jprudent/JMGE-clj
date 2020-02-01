@@ -69,11 +69,11 @@
                (fn [sum _fan] (inc sum))
                (constantly 1)))
 
-(defn group-by
+(defn having-group-by
   [k]
   (fn [acc fan] (update acc (k fan) (fnil conj []) fan)))
 
-(defn group-by-init
+(defn having-group-by-init
   [k]
   (fn [fan] {(k fan) [fan]}))
 
@@ -108,11 +108,11 @@
                                                         order-t2)))
                                                (o-fan fan)
                                                other-fans))))
-                  (group-by f-fan)
-                  (group-by-init f-fan)))))
+                  (having-group-by f-fan)
+                  (having-group-by-init f-fan)))))
 
 (defn at-least-one-of
-  "at least on of the tiles"
+  "at least one of the tiles"
   [& one-of-tiles]
   (let [one-of-tiles (set one-of-tiles)
         keep-tile    (fn [tiles] (set (filter one-of-tiles tiles)))]
@@ -429,5 +429,28 @@
     :description "Hand using one of every number, 1-9, in three consecutive chows, in the same suit."
     :points      16
     :predicate   (having :distinct-chows (nb= 3) (same-family) (shifted 3 3))
-    :exclusions  #{:no-honors}}
+    :exclusions  #{}}
+
+   :three-suited-terminal-chows
+   {:key         :three-suited-terminal-chows
+    :name        "Three suited terminal chows"
+    :description "Hand consisting of 1-2-3 + 7-8-9 in one suit (Two Terminal Chows), 1-2-3 + 7-8-9 in another suit,a pair of fives in the third suit."
+    :points      16
+    :predicate   (every-pred
+                   (having :pairs (nb= 1) (at-least-one-of :b5 :c5 :s5))
+                   (having :distinct-chows (nb= 4))
+                   (some-fn
+                     (only-tiles :b1 :b2 :b3 :b7 :b8 :b9
+                                 :c1 :c2 :c3 :c7 :c8 :c9
+                                 :s5)
+                     (only-tiles :b1 :b2 :b3 :b7 :b8 :b9
+                                 :s1 :s2 :s3 :s7 :s8 :s9
+                                 :c5)
+                     (only-tiles :c1 :c2 :c3 :c7 :c8 :c9
+                                 :s1 :s2 :s3 :s7 :s8 :s9
+                                 :b5)))
+    :exclusions  #{:pure-double-chow
+                   :two-terminal-chows
+                   :no-honors
+                   :all-chows}}
    })
