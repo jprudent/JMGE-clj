@@ -69,6 +69,14 @@
                (fn [sum _fan] (inc sum))
                (constantly 1)))
 
+(defn group-by
+  [k]
+  (fn [acc fan] (update acc (k fan) (fnil conj []) fan)))
+
+(defn group-by-init
+  [k]
+  (fn [fan] {(k fan) [fan]}))
+
 (defn all-equals
   ([] (having-pred identity
                    (fn [a b] (and (= a b) a))))
@@ -87,14 +95,21 @@
                (comp m/family second)))
 
 (defn shifted
-  [shift]
-  (having-pred identity
-               (fn [last-order [_ t2]]
-                 (let [order-t2 (m/order t2)]
-                   (and last-order
-                        (= shift (- order-t2 last-order))
-                        order-t2)))
-               (comp m/order second)))
+  ([shift] (shifted 4 shift))
+  ([nb-of-fans shift]
+   (let [f-fan (comp m/family second)
+         o-fan (comp m/order second)]
+     (having-pred (partial some (fn [[_family [fan & other-fans :as fans]]]
+                                  (and (= nb-of-fans (count fans))
+                                       (reduce (fn [last-order fan]
+                                                 (let [order-t2 (o-fan fan)]
+                                                   (and last-order
+                                                        (= shift (- order-t2 last-order))
+                                                        order-t2)))
+                                               (o-fan fan)
+                                               other-fans))))
+                  (group-by f-fan)
+                  (group-by-init f-fan)))))
 
 (defn at-least-one-of
   "at least on of the tiles"
@@ -192,7 +207,7 @@
     :name        "Seven shifted pairs"
     :description "Hand is composed of seven pairs in the same suit, each shifted one up from the last."
     :points      88
-    :predicate   (having :pairs (nb= 7) (same-family) (shifted 1))
+    :predicate   (having :pairs (nb= 7) (same-family) (shifted 7 1))
     :exclusions  #{:full-flush
                    :concealed-hand
                    :single-wait
@@ -370,5 +385,16 @@
     :description "Three chows of the same numerical sequence and in the same suit."
     :points      24
     :predicate   (having :chows (all-equals 3))
-    :exclusions  #{:no-honors}}
+    :exclusions  #{:no-honors
+
+                   ;; exclusions I added
+                   :pure-shifted-pungs}}
+
+   :pure-shifted-pungs
+   {:key         :pure-shifted-pungs
+    :name        "Pure shifted pungs"
+    :description "Three Pungs or Kongs of the same suit, each shifted one up from the last."
+    :points      24
+    :predicate   (having :pungs-or-kongs (shifted 3 1))
+    :exclusions  #{:pure-triple-chow}}
    })
