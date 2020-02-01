@@ -79,7 +79,8 @@
             :prevalent-wind :we
             :seat-wind      :ws})))
 
-  (is (= [[(:all-green fans/fans)]
+  (is (= [[(:pure-shifted-pungs fans/fans)
+           (:all-green fans/fans)]
           [(:pure-triple-chow fans/fans)
            (:all-green fans/fans)]]
          (sut/scoring
@@ -414,6 +415,32 @@
             :fans            [[:chow :c3 :c4 :c5]           ;; a shift by 2
                               [:chow :c5 :c6 :c7]
                               [:chow :s7 :s8 :s9]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:pure-shifted-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c1 :c2 :c3]
+            :fans            [[:chow :c3 :c4 :c5]           ;; a shift by 2
+                              [:chow :c5 :c6 :c7]
+                              [:chow :c2 :c3 :c4]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:pure-shifted-chows fans/fans)]]
+         (sut/scoring
+           {:hand            [:s5 :s5
+                              :c2 :c3 :c4]
+            :fans            [[:chow :c3 :c4 :c5]           ;; a shift by 1
+                              [:chow :c4 :c5 :c6]
+                              [:chow :c2 :c3 :c4]]
             :concealed-kongs []
             :out             [:s5 :self-drawn]
             :wind            :we

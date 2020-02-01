@@ -86,22 +86,25 @@
                       last-family))
                (comp m/family second)))
 
-(defn shifted
-  ([shift] (shifted 4 shift))
+(defn shifted-family
+  ([shift] (shifted-family 4 shift))
   ([nb-of-fans shift]
    (let [f-fan (comp m/family second)
          o-fan (comp m/order second)]
      (fn [fans]
+       (sc.api/spy fans)
        (->> (group-by f-fan fans)
-            (some (fn [[_family [fan & other-fans :as fans]]]
-                    (and (= nb-of-fans (count fans))
-                         (reduce (fn [last-order fan]
-                                   (let [order-t2 (o-fan fan)]
-                                     (and last-order
-                                          (= shift (- order-t2 last-order))
-                                          order-t2)))
-                                 (o-fan fan)
-                                 other-fans)))))))))
+            (some (fn [[_family fans]]
+                    (= nb-of-fans
+                       (count
+                         (let [os (keep o-fan fans)]
+                           (reduce
+                             (fn [[x :as acc] y]
+                               (if (= shift (- y x))
+                                 (conj acc y)
+                                 acc))
+                             (take 1 os)
+                             (rest os))))))))))))
 
 (defn at-least-one-of
   "at least one of the tiles"
@@ -199,7 +202,7 @@
     :name        "Seven shifted pairs"
     :description "Hand is composed of seven pairs in the same suit, each shifted one up from the last."
     :points      88
-    :predicate   (having :pairs (nb= 7) (same-family) (shifted 7 1))
+    :predicate   (having :pairs (nb= 7) (same-family) (shifted-family 7 1))
     :exclusions  #{:full-flush
                    :concealed-hand
                    :single-wait
@@ -304,7 +307,7 @@
     :name        "Four pure shifted pungs"
     :description "Four Pungs or Kongs in the same suit, each shifted up one from the last."
     :points      48
-    :predicate   (having :pungs-or-kongs (nb= 4) (same-family) (shifted 1))
+    :predicate   (having :pungs-or-kongs (nb= 4) (same-family) (shifted-family 1))
     :exclusions  #{:pure-triple-chow :all-pungs}}
 
    :four-shifted-chows
@@ -312,8 +315,8 @@
     :name        "Four shifted chows"
     :description "Four chows in one suit, each shifted up 1 or 2 numbers from the last, but not a combination of both."
     :points      32
-    :predicate   (having :chows (nb= 4) (same-family) (some-fn (shifted 1)
-                                                               (shifted 2)))
+    :predicate   (having :chows (nb= 4) (same-family) (some-fn (shifted-family 1)
+                                                               (shifted-family 2)))
     :exclusions  #{:short-straight}}
 
    :three-kongs
@@ -387,7 +390,7 @@
     :name        "Pure shifted pungs"
     :description "Three Pungs or Kongs of the same suit, each shifted one up from the last."
     :points      24
-    :predicate   (having :pungs-or-kongs (shifted 3 1))
+    :predicate   (having :pungs-or-kongs (shifted-family 3 1))
     :exclusions  #{:pure-triple-chow}}
 
    :upper-tiles
@@ -420,7 +423,7 @@
     :name        "Pure straight"
     :description "Hand using one of every number, 1-9, in three consecutive chows, in the same suit."
     :points      16
-    :predicate   (having :distinct-chows (nb= 3) (same-family) (shifted 3 3))
+    :predicate   (having :chows (shifted-family 3 3))
     :exclusions  #{}}
 
    :three-suited-terminal-chows
@@ -451,6 +454,6 @@
     :name        "Pure shifted chows"
     :description "Three chows in one suit, each shifted up either one or two numbers from the last, but not acombination of both."
     :points      16
-    :predicate   (having :chows (some-fn (shifted 3 1) (shifted 3 2)))
+    :predicate   (having :chows (some-fn (shifted-family 3 1) (shifted-family 3 2)))
     :exclusions  #{}}
    })

@@ -97,13 +97,13 @@
 
 ;;; various tiles related functions
 
-(defn- tile-to-char-seq [tile] (vec (str tile)))
+(defn- get-char [tile position] (get (str tile) position))
 
 (defn- char-to-int [c] (- (int c) (int \0)))
 
-(defn family [tile] ((tile-to-char-seq tile) 1))
+(defn family [tile] (get-char tile 1))
 
-(defn order [tile] (char-to-int ((tile-to-char-seq tile) 2)))
+(defn order [tile] (char-to-int (get-char tile 2)))
 
 (defn to-tile [family order] (keyword (str family order)))
 
