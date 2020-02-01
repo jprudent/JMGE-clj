@@ -92,7 +92,6 @@
    (let [f-fan (comp m/family second)
          o-fan (comp m/order second)]
      (fn [fans]
-       (sc.api/spy fans)
        (->> (group-by f-fan fans)
             (some (fn [[_family fans]]
                     (= nb-of-fans
@@ -455,5 +454,16 @@
     :description "Three chows in one suit, each shifted up either one or two numbers from the last, but not acombination of both."
     :points      16
     :predicate   (having :chows (some-fn (shifted-family 3 1) (shifted-family 3 2)))
+    :exclusions  #{}}
+
+   :all-fives
+   {:key         :all-fives
+    :name        "All fives"
+    :description "A hand in which every element includes a 5 tile"
+    :points      16
+    :predicate   (having
+                   :all-fans
+                   (fn [fans]
+                     (= 5 (count (keep (comp #(% 5) set #(map m/order %) rest) fans)))))
     :exclusions  #{}}
    })
