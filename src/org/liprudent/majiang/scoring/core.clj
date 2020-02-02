@@ -222,18 +222,18 @@
                                                 pungs-or-kongs
                                                 pairs
                                                 chows)
-                     context          {:game            game
-                                       :hand            hand
-                                       :pungs           pungs
-                                       :kongs           kongs
-                                       :pairs           pairs
-                                       :pungs-or-kongs  pungs-or-kongs
-                                       :knitted         knitted
-                                       :chows           chows
-                                       :distinct-chows  (set chows)
-                                       :all-tiles       all-tiles
-                                       :all-fans        all-fans
-                                       :concealed-pungs concealed-pungs}]]
+                     context          (sc.api/spy {:game            game
+                                                   :hand            hand
+                                                   :pungs           pungs
+                                                   :kongs           kongs
+                                                   :pairs           pairs
+                                                   :pungs-or-kongs  pungs-or-kongs
+                                                   :knitted         knitted
+                                                   :chows           chows
+                                                   :distinct-chows  (set chows)
+                                                   :all-tiles       all-tiles
+                                                   :all-fans        all-fans
+                                                   :concealed-pungs concealed-pungs})]]
            (doall (->> (for [fan fans/fans
                              :let [[_k {:keys [predicate] :as r}] fan]
                              :when (predicate context)] r)

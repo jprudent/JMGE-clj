@@ -86,24 +86,34 @@
                       last-family))
                (comp m/family second)))
 
+(def f-fan (comp m/family second))
+(def o-fan (comp m/order second))
 (defn shifted-family
   ([shift] (shifted-family 4 shift))
   ([nb-of-fans shift]
-   (let [f-fan (comp m/family second)
-         o-fan (comp m/order second)]
-     (fn [fans]
-       (->> (group-by f-fan fans)
-            (some (fn [[_family fans]]
-                    (= nb-of-fans
-                       (count
-                         (let [os (keep o-fan fans)]
-                           (reduce
-                             (fn [[x :as acc] y]
-                               (if (= shift (- y x))
-                                 (conj acc y)
-                                 acc))
-                             (take 1 os)
-                             (rest os))))))))))))
+   (fn [fans]
+     (->> (group-by f-fan fans)
+          (some (fn [[_family fans]]
+                  (= nb-of-fans
+                     (count
+                       (let [os (keep o-fan fans)]
+                         (reduce
+                           (fn [[x :as acc] y]
+                             (if (= shift (- y x))
+                               (conj acc y)
+                               acc))
+                           (take 1 os)
+                           (rest os)))))))))))
+
+(defn same-order-distinct-families
+  [nb-of-distinct-families]
+  (fn [fans]
+    (->> (group-by o-fan fans)
+         (some (fn [[order fans]]
+                 (and order
+                      (= nb-of-distinct-families
+                         (count fans)
+                         (count (set (map f-fan fans))))))))))
 
 (defn at-least-one-of
   "at least one of the tiles"
@@ -430,19 +440,16 @@
     :name        "Three suited terminal chows"
     :description "Hand consisting of 1-2-3 + 7-8-9 in one suit (Two Terminal Chows), 1-2-3 + 7-8-9 in another suit,a pair of fives in the third suit."
     :points      16
-    :predicate   (every-pred
-                   (having :pairs (nb= 1) (at-least-one-of :b5 :c5 :s5))
-                   (having :distinct-chows (nb= 4))
-                   (some-fn
-                     (only-tiles :b1 :b2 :b3 :b7 :b8 :b9
-                                 :c1 :c2 :c3 :c7 :c8 :c9
-                                 :s5)
-                     (only-tiles :b1 :b2 :b3 :b7 :b8 :b9
-                                 :s1 :s2 :s3 :s7 :s8 :s9
-                                 :c5)
-                     (only-tiles :c1 :c2 :c3 :c7 :c8 :c9
-                                 :s1 :s2 :s3 :s7 :s8 :s9
-                                 :b5)))
+    :predicate   (having :all-fans
+                         #{[[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
+                            [:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
+                            [:pair :s5]]
+                           [[:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
+                            [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
+                            [:pair :b5]]
+                           [[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
+                            [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
+                            [:pair :c5]]})
     :exclusions  #{:pure-double-chow
                    :two-terminal-chows
                    :no-honors
@@ -465,5 +472,13 @@
                    :all-fans
                    (fn [fans]
                      (= 5 (count (keep (comp #(% 5) set #(map m/order %) rest) fans)))))
+    :exclusions  #{:all-simple}}
+
+   :triple-pungs
+   {:key         :triple-pungs
+    :name        "Triple pungs"
+    :description "Three Pungs of the same number, in each suit"
+    :points      16
+    :predicate   (having :pungs-or-kongs (same-order-distinct-families 3))
     :exclusions  #{}}
    })
