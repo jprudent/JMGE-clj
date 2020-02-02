@@ -106,7 +106,7 @@
         g1      (set (range 1 10 3))
         g2      (set (range 2 10 3))
         g3      (set (range 3 10 3))]
-    (when (and (= m/honors (set honors))
+    (when (and (= 14 (reduce + (map (comp count distinct) [honors chars bamboos stones])))
                (or (and (every? g1 bamboos) (every? g2 chars) (every? g3 stones))
                    (and (every? g1 bamboos) (every? g3 chars) (every? g2 stones))
 

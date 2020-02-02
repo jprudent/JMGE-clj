@@ -362,9 +362,13 @@
     :name        "Greater honors and knitted tiles"
     :description "Formed by 7 single Honors (one of every Wind and Dragon), and singles of suit tiles belonging toseparate Knitted sequences (for example, 1-4-7 of Bamboos, 2-5-8 of Characters, and 3-6-9 of Stones)."
     :points      24
-    :predicate   (having :knitted (nb= 1))
+    :predicate   (every-pred (having :knitted (nb= 1))
+                             (every-tiles :wn :we :ws :ww :dr :dg :dw))
     :exclusions  #{:concealed-hand
-                   :all-types}}
+                   :all-types
+
+                   ;; i added
+                   :lesser-honors-and-knitted}}
 
    :all-even-pungs
    {:key         :all-even-pungs
@@ -489,5 +493,13 @@
     :description "Three Pungs achieved without melding"
     :points      16
     :predicate   (having :concealed-pungs (nb= 3))
+    :exclusions  #{}}
+
+   :lesser-honors-and-knitted
+   {:key         :lesser-honors-and-knitted
+    :name        "Lesser honors and knitted tiles"
+    :description "A hand made of singles of the following tiles: Any Honors, along with Suit tiles that belong todifferent Knitted sequences (for example, 1-4-7 of Characters, 2-5-8 of Bamboos, and 3-6-9 ofDots - each of the 3 suits must belong to a different Knitted sequence, but not necessarily in theorder listed here)."
+    :points      16
+    :predicate   (having :knitted (nb= 1))
     :exclusions  #{}}
    })
