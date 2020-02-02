@@ -55,7 +55,8 @@
 
 (deftest scoring-test
 
-  (is (= [[(:big-four-winds fans/fans)]]
+  (is (= [[(:three-concealed-pungs fans/fans)
+           (:big-four-winds fans/fans)]]
          (sut/scoring
            {:hand           [:ws :ws :ws
                              :ww :ww :ww
@@ -69,17 +70,19 @@
 
   (is (= [[(:big-three-dragons fans/fans)]]
          (sut/scoring
-           {:hand           [:dr :dw :dg
-                             :dr :dw :dg
-                             :dr :dw :dg
+           {:hand           [:dw :dg
+                             :dw :dg
+                             :dw :dg
                              :s3 :s3]
-            :fans           [[:pung :we]]
+            :fans           [[:pung :we]
+                             [:pung :dr]]
             :out            [:s3 :discarded]
             :wind           :we
             :prevalent-wind :we
             :seat-wind      :ws})))
 
   (is (= [[(:pure-shifted-pungs fans/fans)
+           (:three-concealed-pungs fans/fans)
            (:all-green fans/fans)]
           [(:pure-triple-chow fans/fans)
            (:all-green fans/fans)]]
@@ -448,25 +451,38 @@
             :seat-wind       :ws})))
 
   (is (= [[(:all-fives fans/fans)]]
-           (sut/scoring
-             {:hand            [:s4 :s5 :s6
-                                :c3 :c4 :c5
-                                :b5 :b5]
-              :fans            [[:pung :c5]
-                                [:pung :s5]]
-              :concealed-kongs []
-              :out             [:s5 :self-drawn]
-              :wind            :we
-              :prevalent-wind  :we
-              :seat-wind       :ws})))
+         (sut/scoring
+           {:hand            [:s4 :s5 :s6
+                              :c3 :c4 :c5
+                              :b5 :b5]
+            :fans            [[:pung :c5]
+                              [:pung :s5]]
+            :concealed-kongs []
+            :out             [:s5 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
 
   (is (= [[(:triple-pungs fans/fans)]]
-            (sut/scoring
-              {:hand            [:s3 :s3 :s3 :b4 :b4]
-               :fans            [[:pung :c3]
-                                 [:kong :b3]]
-               :concealed-kongs [[:kong :c9]]
-               :out             [:b4 :self-drawn]
-               :wind            :we
-               :prevalent-wind  :we
-               :seat-wind       :ws}))))
+         (sut/scoring
+           {:hand            [:s3 :s3 :s3 :b4 :b4]
+            :fans            [[:pung :c3]
+                              [:kong :b3]]
+            :concealed-kongs [[:kong :c9]]
+            :out             [:b4 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:three-concealed-pungs fans/fans)]]
+         (sut/scoring
+           {:hand            [:s3 :s3 :s3
+                              :b4 :b4 :b4
+                              :s9 :s9 :s9
+                              :c1 :c1]
+            :fans            [[:pung :c3]]
+            :concealed-kongs []
+            :out             [:b4 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws}))))

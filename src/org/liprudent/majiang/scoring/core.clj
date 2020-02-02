@@ -153,7 +153,9 @@
 (defn all-concealed-pungs
   [game]
   (sort/sort-fans
-    (filter pung? (:hand game))))
+    (concat
+      (:concealed-kongs game)
+      (filter pung? (:hand game)))))
 
 (defn all-kongs
   [game]

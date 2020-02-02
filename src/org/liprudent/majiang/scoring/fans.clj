@@ -276,6 +276,7 @@
     :name        "Four concealed pungs"
     :description "Hand includes four Pungs achieved without melding"
     :points      64
+    ;; todo check if concealed kong are valid for this hand
     :predicate   (having :concealed-pungs (nb= 4))
     :exclusions  #{:fully-concealed :self-drawn}}
 
@@ -480,5 +481,13 @@
     :description "Three Pungs of the same number, in each suit"
     :points      16
     :predicate   (having :pungs-or-kongs (same-order-distinct-families 3))
+    :exclusions  #{}}
+
+   :three-concealed-pungs
+   {:key         :three-concealed-pungs
+    :name        "Three concealed pungs"
+    :description "Three Pungs achieved without melding"
+    :points      16
+    :predicate   (having :concealed-pungs (nb= 3))
     :exclusions  #{}}
    })
