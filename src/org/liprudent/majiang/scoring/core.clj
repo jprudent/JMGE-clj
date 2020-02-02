@@ -2,9 +2,10 @@
   (:require [clojure.math.combinatorics :as combo]
             [org.liprudent.majiang.scoring.fans :as fans]
             [org.liprudent.majiang.scoring.sort :as sort]
-            [org.liprudent.majiang.model :as m]))
+            [org.liprudent.majiang.model :as m]
+            [clojure.set :as set]))
 
-(def all-suits
+(def all-suits-of-3
   (set (for [suit-number (partition 3 1 (range 1 10))
              family      [\b \c \s]]
          (map #(keyword (str family %)) suit-number))))
@@ -13,7 +14,7 @@
   (and (nil? others) (= t1 t2 t3)))
 
 (defn chow-freq? [tiles]
-  (and (= 3 (count tiles)) (all-suits tiles)))
+  (and (= 3 (count tiles)) (all-suits-of-3 tiles)))
 
 (defn pair-freq? [[t1 t2 & others]]
   (and (nil? others) (= t1 t2)))
@@ -77,6 +78,7 @@
 (defn pattern-finder
   [fan-size valid-fan-pred]
   (fn [tiles]
+    ;; tiles must be sorted
     (let [fan-freqs     (->> (combo/combinations tiles fan-size)
                              (filter valid-fan-pred)
                              (map frequencies))
@@ -117,9 +119,31 @@
                    (and (every? g3 bamboos) (every? g1 chars) (every? g2 stones))))
       [[(apply vector :knitted (sort/sort-tiles tiles))]])))
 
+(def knitted-straights
+  (->> (combo/permutations [\b \c \s])
+       (map (comp set #(map m/to-tile (cycle %) (range 1 10))))
+       (set)))
+
+(defn remove-tiles
+  [xs ys]
+  ;; only works if ys is a subset of xs
+  (->> (merge-with - (frequencies xs) (frequencies ys))
+       (reduce-kv #(into %1 (repeat %3 %2)) [])))
+
+(defn knitted-straight
+  [tiles]
+  (sc.api/spy)
+  (when-let [[knit-fan
+              not-knit-tiles] (some #(when (set/subset? % (set tiles))
+                                       [(apply vector :knitted-straight %)
+                                        (remove-tiles tiles %)])
+                                    knitted-straights)]
+    (map #(conj % knit-fan) (classic-hand (sort not-knit-tiles)))))
+
 (defn find-valid-patterns
   [tiles]
   (reduce into #{} [(classic-hand tiles)
+                    (knitted-straight tiles)
                     (seven-pairs-hand tiles)
                     (thirteen-orphans tiles)
                     (knitted-hand tiles)]))
@@ -135,14 +159,19 @@
 (def chow? (comp #{:chow} first))
 (def thirteen-orphans? (comp #{:thirteen-orphans} first))
 (def knitted? (comp #{:knitted} first))
+(def knitted-straight? (comp #{:knitted-straight} first))
 
-(defn all-thirteen-orphans
-  [game]
-  (filter thirteen-orphans? (:hand game)))
+(defn fan-finder
+  [pred game]
+  (sort/sort-fans (filter pred (:hand game))))
 
-(defn all-knitted
-  [game]
-  (filter knitted? (:hand game)))
+(def all-thirteen-orphans (partial fan-finder thirteen-orphans?))
+
+(def all-knitted (partial fan-finder knitted?))
+
+(def all-knitted-straight (partial fan-finder knitted-straight?))
+
+(def all-pairs (partial fan-finder pair?))
 
 (defn all-pungs
   [game]
@@ -163,11 +192,6 @@
     (into (filter kong? (:fans game))
           (:concealed-kongs game))))
 
-(defn all-pairs
-  [game]
-  (sort/sort-fans
-    (filter pair? (:hand game))))
-
 (defn all-chows
   [game]
   (sort/sort-fans
@@ -182,7 +206,8 @@
     :pair [t1 t1]
     :kong [t1 t1 t1]                                        ;; count for 3, because we would get more than 14 tiles otherwise
     :thirteen-orphans tiles
-    :knitted tiles))
+    :knitted tiles
+    :knitted-straight tiles))
 
 (defn all-tiles
   [& fans]
@@ -212,11 +237,13 @@
                      kongs            (all-kongs game)
                      thirteen-orphans (all-thirteen-orphans game)
                      knitted          (all-knitted game)
+                     knitted-straight (all-knitted-straight game)
                      pungs-or-kongs   (sort/sort-fans (into pungs kongs))
                      pairs            (all-pairs game)
                      chows            (all-chows game)
                      all-tiles        (all-tiles thirteen-orphans
                                                  pungs-or-kongs
+                                                 knitted-straight
                                                  pairs
                                                  chows
                                                  knitted)
@@ -224,18 +251,19 @@
                                                 pungs-or-kongs
                                                 pairs
                                                 chows)
-                     context          (sc.api/spy {:game            game
-                                                   :hand            hand
-                                                   :pungs           pungs
-                                                   :kongs           kongs
-                                                   :pairs           pairs
-                                                   :pungs-or-kongs  pungs-or-kongs
-                                                   :knitted         knitted
-                                                   :chows           chows
-                                                   :distinct-chows  (set chows)
-                                                   :all-tiles       all-tiles
-                                                   :all-fans        all-fans
-                                                   :concealed-pungs concealed-pungs})]]
+                     context          (sc.api/spy {:game             game
+                                                   :hand             hand
+                                                   :pungs            pungs
+                                                   :kongs            kongs
+                                                   :pairs            pairs
+                                                   :pungs-or-kongs   pungs-or-kongs
+                                                   :knitted          knitted
+                                                   :knitted-straight knitted-straight
+                                                   :chows            chows
+                                                   :distinct-chows   (set chows)
+                                                   :all-tiles        all-tiles
+                                                   :all-fans         all-fans
+                                                   :concealed-pungs  concealed-pungs})]]
            (doall (->> (for [fan fans/fans
                              :let [[_k {:keys [predicate] :as r}] fan]
                              :when (predicate context)] r)

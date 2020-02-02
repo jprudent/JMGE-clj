@@ -499,7 +499,15 @@
    {:key         :lesser-honors-and-knitted
     :name        "Lesser honors and knitted tiles"
     :description "A hand made of singles of the following tiles: Any Honors, along with Suit tiles that belong todifferent Knitted sequences (for example, 1-4-7 of Characters, 2-5-8 of Bamboos, and 3-6-9 ofDots - each of the 3 suits must belong to a different Knitted sequence, but not necessarily in theorder listed here)."
-    :points      16
+    :points      12
     :predicate   (having :knitted (nb= 1))
+    :exclusions  #{}}
+
+   :knitted-straight
+   {:key         :knitted-straight
+    :name        "Knitted straight"
+    :description "A special Straight which is formed not with standard Chows but with 3 different Knittedsequences. For example, 1-4-7 of Dots, 2-5-8 of Characters, and 3-6-9 of Bamboos - but notnecessarily in this order"
+    :points      12
+    :predicate   (having :knitted-straight (nb= 1))
     :exclusions  #{}}
    })

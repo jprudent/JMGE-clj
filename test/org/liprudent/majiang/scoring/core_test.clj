@@ -488,29 +488,42 @@
             :seat-wind       :ws})))
 
   (is (= [[(:lesser-honors-and-knitted fans/fans)]]
-           (sut/scoring
-             {:hand            [:b1 :b4 :b7
-                                :c2 :c5 :c8
-                                :s3 :s9
-                                :dr :dw :dg
-                                :wn :we :ws]
-              :fans            []
-              :concealed-kongs []
-              :out             [:b4 :self-drawn]
-              :wind            :we
-              :prevalent-wind  :we
-              :seat-wind       :ws})))
+         (sut/scoring
+           {:hand            [:b1 :b4 :b7
+                              :c2 :c5 :c8
+                              :s3 :s9
+                              :dr :dw :dg
+                              :wn :we :ws]
+            :fans            []
+            :concealed-kongs []
+            :out             [:b4 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
 
   (is (= [[(:lesser-honors-and-knitted fans/fans)]]
-             (sut/scoring
-               {:hand            [:b1 :b4 :b7
-                                  :c2 :c5 :c8
-                                  :s6 :s3 :s9
-                                  :dr :dw :dg
-                                  :wn :we]
-                :fans            []
-                :concealed-kongs []
-                :out             [:b4 :self-drawn]
-                :wind            :we
-                :prevalent-wind  :we
-                :seat-wind       :ws}))))
+         (sut/scoring
+           {:hand            [:b1 :b4 :b7
+                              :c2 :c5 :c8
+                              :s6 :s3 :s9
+                              :dr :dw :dg
+                              :wn :we]
+            :fans            []
+            :concealed-kongs []
+            :out             [:b4 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws})))
+
+  (is (= [[(:knitted-straight fans/fans)]]
+         (sut/scoring
+           {:hand            [:b1 :b4 :b7
+                              :c2 :c5 :c8
+                              :s6 :s3 :s9
+                              :wn :wn]
+            :fans            []
+            :concealed-kongs [[:kong :b2]]
+            :out             [:b4 :self-drawn]
+            :wind            :we
+            :prevalent-wind  :we
+            :seat-wind       :ws}))))
