@@ -434,7 +434,9 @@
     :description "Hand consisting entirely of 1, 2 and 3 tiles."
     :points 24
     :predicate (only-tiles :b1 :b2 :b3 :c1 :c2 :c3 :s1 :s2 :s3)
-    :exclusions #{:no-honors}}
+    :exclusions #{:no-honors
+                  ;; I added
+                  :lower-four}}
 
    :pure-straight
    {:key :pure-straight
@@ -523,5 +525,15 @@
     :predicate (only-tiles :b6 :b7 :b8 :b9
                            :c6 :c7 :c8 :c9
                            :s6 :s7 :s8 :s9)
+    :exclusions #{:no-honors}}
+
+   :lower-four
+   {:key :lower-four
+    :name "Lower four"
+    :description "A hand created with suit tiles 1 through 4 only."
+    :points 12
+    :predicate (only-tiles :b1 :b2 :b3 :b4
+                           :c1 :c2 :c3 :c4
+                           :s1 :s2 :s3 :s4)
     :exclusions #{:no-honors}}
    })

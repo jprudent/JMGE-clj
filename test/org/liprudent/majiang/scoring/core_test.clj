@@ -538,4 +538,16 @@
            :out             [:b7 :self-drawn]
            :wind            :we
            :prevalent-wind  :we
+           :seat-wind       :ws})))
+
+  (is (= [[(:lower-four fans/fans)]]
+         (sut/scoring
+          {:hand            [:b2 :b3 :b4
+                             :s1 :s2 :s3
+                             :b2 :b2]
+           :fans            [[:chow :c2 :c3 :c4]]
+           :concealed-kongs [[:kong :s4]]
+           :out             [:b2 :self-drawn]
+           :wind            :we
+           :prevalent-wind  :we
            :seat-wind       :ws}))))
