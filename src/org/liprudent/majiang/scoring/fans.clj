@@ -88,6 +88,16 @@
 
 (def f-fan (comp m/family second))
 (def o-fan (comp m/order second))
+
+(defn same-family=n
+  [family n]
+  (fn [fans]
+    (->> (group-by f-fan fans)
+         (filter (fn [[fam fans]] (and (= fam family)
+                                      (= n (count fans)))))
+         (not-empty)
+         (some?))))
+
 (defn shifted-family
   ([shift] (shifted-family 4 shift))
   ([nb-of-fans shift]
@@ -535,5 +545,13 @@
     :predicate (only-tiles :b1 :b2 :b3 :b4
                            :c1 :c2 :c3 :c4
                            :s1 :s2 :s3 :s4)
+    :exclusions #{:no-honors}}
+
+   :big-three-winds
+   {:key :big-three-winds
+    :name "Big three winds"
+    :description "Hand includes Pungs or Kongs of three of the Winds."
+    :points 12
+    :predicate (having :pungs-or-kongs (same-family=n \w 3))
     :exclusions #{:no-honors}}
    })

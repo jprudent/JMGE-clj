@@ -178,7 +178,8 @@
             :prevalent-wind  :we
             :seat-wind       :ws})))
 
-  (is (= [[(:all-honors fans/fans)]]
+  (is (= [[(:all-honors fans/fans)
+           (:big-three-winds fans/fans)]]
          (sut/scoring
            {:hand            [:dw :dw :we :we :we]
             :fans            [[:pung :ww] [:pung :dg]]
@@ -547,6 +548,32 @@
                              :b2 :b2]
            :fans            [[:chow :c2 :c3 :c4]]
            :concealed-kongs [[:kong :s4]]
+           :out             [:b2 :self-drawn]
+           :wind            :we
+           :prevalent-wind  :we
+           :seat-wind       :ws})))
+
+  (is (= [[(:big-three-winds fans/fans)]]
+         (sut/scoring
+          {:hand            [:wn :wn :wn
+                             :s1 :s2 :s3
+                             :s4 :s4]
+           :fans            [[:kong :we]]
+           :concealed-kongs [[:kong :ws]]
+           :out             [:b2 :self-drawn]
+           :wind            :we
+           :prevalent-wind  :we
+           :seat-wind       :ws})))
+
+  (is (= [[(:big-three-winds fans/fans)
+           (:three-concealed-pungs fans/fans)
+           (:all-terminals-and-honors fans/fans)]]
+         (sut/scoring
+          {:hand            [:wn :wn :wn
+                             :s1 :s1 :s1
+                             :s4 :s4]
+           :fans            [[:kong :we]]
+           :concealed-kongs [[:kong :ws]]
            :out             [:b2 :self-drawn]
            :wind            :we
            :prevalent-wind  :we
