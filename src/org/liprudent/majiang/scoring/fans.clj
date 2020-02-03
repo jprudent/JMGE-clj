@@ -2,14 +2,6 @@
   (:require [clojure.set :as set]
             [org.liprudent.majiang.model :as m]))
 
-
-(defn having-pungs-or-kongs
-  [& tiles]
-  (fn [{:keys [pungs-or-kongs]}]
-    (= (set tiles)
-       (set/intersection (set (map second pungs-or-kongs))
-                         (set tiles)))))
-
 (defn only-tiles
   [& allowed-tiles]
   (fn [{:keys [all-tiles]}]
@@ -167,7 +159,7 @@
     :name "Big four winds"
     :description "Pungs or Kongs of all four Wind Tiles"
     :points 88
-    :predicate (having-pungs-or-kongs :we :ws :ww :wn)
+    :predicate (having :pungs-or-kongs (same-family=n \w 4))
     :exclusions #{:big-three-winds
                   :all-pungs
                   :prevalent-wind
@@ -181,7 +173,7 @@
     :name "Big three dragons"
     :description "Pungs or Kongs of all three Dragon tiles"
     :points 88
-    :predicate (having-pungs-or-kongs :dr :dw :dg)
+    :predicate (having :pungs-or-kongs (same-family=n \d 3))
     :exclusions #{:two-dragons
                   :dragon-pung
 
@@ -254,11 +246,8 @@
     :description "A hand that contains a pung/kong of three winds and a pair of the fourth."
     :points 64
     :predicate (every-pred
-                (every-tiles :we :ws :ww :wn)
-                (some-fn (having-pungs-or-kongs :we)
-                         (having-pungs-or-kongs :ws)
-                         (having-pungs-or-kongs :ww)
-                         (having-pungs-or-kongs :wn)))
+                (having :pairs (same-family=n \w 1))
+                (having :pungs-or-kongs (same-family=n \w 3)))
     :exclusions #{:big-three-winds :pung-of-terminals-or-honors}}
 
    :little-three-dragons
@@ -267,10 +256,8 @@
     :description "A hand that contains a pung/kong of two dragons and a pair of the third."
     :points 64
     :predicate (every-pred
-                (every-tiles :dr :dg :dw)
-                (some-fn (having-pungs-or-kongs :dr)
-                         (having-pungs-or-kongs :dg)
-                         (having-pungs-or-kongs :dw)))
+                (having :pairs (same-family=n \d 1))
+                (having :pungs-or-kongs (same-family=n \d 2)))
     :exclusions #{:dragon-pung :two-dragons}}
 
    :all-honors
@@ -286,7 +273,6 @@
     :name "Four concealed pungs"
     :description "Hand includes four Pungs achieved without melding"
     :points 64
-    ;; todo check if concealed kong are valid for this hand
     :predicate (having :concealed-pungs (nb= 4))
     :exclusions #{:fully-concealed :self-drawn}}
 
