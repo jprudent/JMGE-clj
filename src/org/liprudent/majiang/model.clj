@@ -10,6 +10,8 @@
                     (take 136)
                     (concat flowers+seasons)
                     (vec)))
+(def green-tiles #{:b2 :b3 :b4 :b6 :b8 :dg})
+(def tile? (set all-tiles))
 
 (defrecord Turn [player player-states])
 

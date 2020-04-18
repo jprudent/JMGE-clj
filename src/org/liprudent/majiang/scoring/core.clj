@@ -264,6 +264,8 @@
                               :all-fans all-fans
                               :concealed-pungs concealed-pungs}]]
            (doall (->> (for [fan fans/fans
-                             :let [[_k {:keys [predicate] :as r}] fan]
-                             :when (predicate context)] r)
+                             :let [[_k {:keys [predicate] :as r}] fan
+                                   matching-fans (predicate context)]
+                             :when (not-empty matching-fans)]
+                         (assoc r :matching-fans matching-fans))
                        (remove-exclusions))))))
