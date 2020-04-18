@@ -20,7 +20,8 @@
 (import java.util.concurrent.ConcurrentHashMap)
 (import java.util.ConcurrentModificationException)
 
-(def in-memory-event-store
+(defn in-memory-event-store
+  []
   (let [streams (ConcurrentHashMap.)
         empty-stream (->EventStream 0 [])]
     (reify EventStore

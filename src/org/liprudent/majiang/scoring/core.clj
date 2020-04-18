@@ -132,7 +132,6 @@
 
 (defn knitted-straight
   [tiles]
-  (sc.api/spy)
   (when-let [[knit-fan
               not-knit-tiles] (some #(when (set/subset? % (set tiles))
                                        [(apply vector :knitted-straight %)
@@ -251,19 +250,19 @@
                                                 pungs-or-kongs
                                                 pairs
                                                 chows)
-                     context          (sc.api/spy {:game             game
-                                                   :hand             hand
-                                                   :pungs            pungs
-                                                   :kongs            kongs
-                                                   :pairs            pairs
-                                                   :pungs-or-kongs   pungs-or-kongs
-                                                   :knitted          knitted
-                                                   :knitted-straight knitted-straight
-                                                   :chows            chows
-                                                   :distinct-chows   (set chows)
-                                                   :all-tiles        all-tiles
-                                                   :all-fans         all-fans
-                                                   :concealed-pungs  concealed-pungs})]]
+                     context {:game game
+                              :hand hand
+                              :pungs pungs
+                              :kongs kongs
+                              :pairs pairs
+                              :pungs-or-kongs pungs-or-kongs
+                              :knitted knitted
+                              :knitted-straight knitted-straight
+                              :chows chows
+                              :distinct-chows (set chows)
+                              :all-tiles all-tiles
+                              :all-fans all-fans
+                              :concealed-pungs concealed-pungs}]]
            (doall (->> (for [fan fans/fans
                              :let [[_k {:keys [predicate] :as r}] fan]
                              :when (predicate context)] r)
