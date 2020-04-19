@@ -213,6 +213,179 @@
     #{all-fans}
     #{}))
 
+(defn fan-family
+  "family of the tiles the fan belongs to"
+  [[_ tile :as fan]]
+  (m/family tile))
+
+(defn ==familyo
+  [fan1l fan2l]
+  (l/project [fan1l fan2l]
+    (l/== (fan-family fan1l) (fan-family fan2l))))
+
+(l/defne full-flusho
+  [fansl]
+  ([[]])
+  ([[fan]])
+  ([[fan1 fan2 . fans]]
+   (==familyo fan1 fan2)
+   (full-flusho (l/lcons fan2 fans))))
+
+#_(let [all-fans-marked (map-indexed #(conj %2 %1) all-fans)
+        fans (l/run* [fansl]
+               (let [all-fansl (repeatedly (count all-fans-marked) l/lvar)]
+                 (l/distincto all-fansl)
+
+                 (full-flusho all-fansl)
+                 (occurenco all-fansl 1 3)
+
+                 (l/== fansl all-fansl)
+                 (sortedo fansl)))]
+    (set fans))
+
+(defn nine-gates
+  [{:keys [all-fans all-tiles] :as game}]
+  (if ((every-pred
+        fully-concealed?
+        full-flush?
+        (full-flush-min-occurence {1 3, 2 1, 3 1, 4 1, 5 1, 6 1, 7 1, 8 1, 9 3})) game)
+    #{all-fans}
+    #{}))
+
+(defn four-kongs
+  [{:keys [kongs]}]
+  (if (= 4 (count kongs))
+    #{kongs}
+    #{}))
+
+(defn seven-shifted-pairs
+  [{:keys [all-fans] :as game}]
+  (if ((having :pairs (nb= 7) (same-family) (shifted-family 7 1)) game)
+    #{all-fans}
+    #{}))
+
+(defn thirteen-orphans
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred
+        (every-tiles :b1 :b9 :c1 :c9 :dg :dr :dw :s1 :s9 :we :wn :ws :ww)
+        (only-tiles :b1 :b9 :c1 :c9 :dg :dr :dw :s1 :s9 :we :wn :ws :ww))
+       game)
+    #{all-fans}
+    #{}))
+
+(defn all-terminals
+  [{:keys [all-fans] :as game}]
+  (if ((only-tiles :b1 :b9 :c1 :c9 :s1 :s9) game)
+    #{all-fans}
+    #{}))
+
+(defn little-four-winds
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred
+        (having :pairs (same-family=n \w 1))
+        (having :pungs-or-kongs (same-family=n \w 3))) game)
+    #{(filter wind? all-fans)}
+    #{}))
+
+(defn little-three-dragons
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred
+        (having :pairs (same-family=n \d 1))
+        (having :pungs-or-kongs (same-family=n \d 2))) game)
+    #{(filter dragon? all-fans)}
+    #{}))
+
+(defn all-honors
+  [{:keys [all-fans] :as game}]
+  (if ((only-tiles :we :ws :ww :wn :dr :dg :dw) game)
+    #{all-fans}
+    #{}))
+
+(defn four-concealed-pungs
+  [{:keys [pungs] :as game}]
+  (if ((having :concealed-pungs (nb= 4)) game)
+    #{pungs}
+    #{}))
+
+(defn pure-terminal-chows
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred
+        (having :chows
+                (nb= 4)
+                (same-family)
+                (some-fn (at-least-one-of :b1 :b2 :b3 :b7 :b8 :b9)
+                         (at-least-one-of :c1 :c2 :c3 :c7 :c8 :c9)
+                         (at-least-one-of :s1 :s2 :s3 :s7 :s8 :s9)))
+        (having :pairs (at-least-one-of :b5))) game)
+    #{all-fans}
+    #{}))
+
+(defn quadruple-chow
+  [{:keys [chows] :as game}]
+  (if ((having :chows (nb= 4) (all-equals)) game)
+    #{chows}
+    #{}))
+
+(defn four-pure-shifted-pungs
+  [{:keys [pungs-or-kongs] :as game}]
+  (if ((having :pungs-or-kongs (nb= 4) (same-family) (shifted-family 1)) game)
+    #{pungs-or-kongs}
+    #{}))
+
+(defn four-shifted-chows
+  [{:keys [chows] :as game}]
+  (if ((having :chows (nb= 4) (same-family) (some-fn (shifted-family 1)
+                                                     (shifted-family 2))) game)
+    #{chows}
+    #{}))
+
+(defn three-kongs
+  [{:keys [kongs] :as game}]
+  (if ((having :kongs (nb= 3)) game)
+    #{kongs}
+    #{}))
+
+(defn all-terminals-and-honors
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred (having :pungs-or-kongs (nb= 4))
+                   (having :all-fans
+                           (at-least-one-of :b1 :b9 :c1 :c9 :s1 :s9)
+                           (at-least-one-of :dr :dg :dw :we :ws :ww :wn))) game)
+    #{all-fans}
+    #{}))
+
+(defn seven-pairs
+  [{:keys [all-fans] :as game}]
+  (if ((having :pairs (nb= 7)) game)
+    #{all-fans}
+    #{}))
+
+(defn greater-honors-and-knitted-tiles
+  [{:keys [all-fans] :as game}]
+  (if ((every-pred (having :knitted (nb= 1))
+                   (every-tiles :wn :we :ws :ww :dr :dg :dw)) game)
+    #{all-fans}
+    #{}))
+
+(defn all-even-pungs
+  [{:keys [pungs-or-kongs] :as game}]
+  (if ((every-pred (having :pungs-or-kongs (nb= 4))
+                   (having :all-fans (suits) (even))) game)
+    #{pungs-or-kongs}
+    #{}))
+
+(defn full-flush
+  [{:keys [all-fans] :as game}]
+  (if ((having :all-fans (suits) (same-family)) game)
+    #{all-fans}
+    #{}))
+
+(defn pure-triple-chow
+  [{:keys [all-fans] :as game}]
+  (if ((having :chows (all-equals 3)) game)
+    #{all-fans}
+    #{}))
+
 (def fans
   {:big-four-winds
    {:key :big-four-winds
@@ -247,213 +420,191 @@
     :points 88
     :predicate all-green}
 
-   #_#_:nine-gates
-       {:key :nine-gates
-        :name "Nine gates"
-        :description "Holding the 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9 tiles in one suit, creating the nine-sided wait of 1, 2, 3, 4, 5, 6, 7, 8, 9."
-        :points 88
-        :predicate (every-pred
-                    fully-concealed?
-                    full-flush?
-                    (full-flush-min-occurence {1 3, 2 1, 3 1, 4 1, 5 1, 6 1, 7 1, 8 1, 9 3}))
-        :exclusions #{:full-flush
-                      :concealed-hand
-                      :pung-of-terminals-or-honors}}
+   :nine-gates
+   {:key :nine-gates
+    :name "Nine gates"
+    :description "Holding the 1, 1, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9 tiles in one suit, creating the nine-sided wait of 1, 2, 3, 4, 5, 6, 7, 8, 9."
+    :points 88
+    :predicate nine-gates
+    :exclusions #{:full-flush
+                  :concealed-hand
+                  :pung-of-terminals-or-honors}}
 
-   #_#_:four-kongs
-       {:key :four-kongs
-        :name "Four kongs"
-        :description "A hand that includes four Kongs."
-        :points 88
-        :predicate (having :kongs (nb= 4))
-        :exclusions #{:single-wait}}
+   :four-kongs
+   {:key :four-kongs
+    :name "Four kongs"
+    :description "A hand that includes four Kongs."
+    :points 88
+    :predicate four-kongs
+    :exclusions #{:single-wait}}
 
-   #_#_:seven-shifted-pairs
-       {:key :seven-shifted-pairs
-        :name "Seven shifted pairs"
-        :description "Hand is composed of seven pairs in the same suit, each shifted one up from the last."
-        :points 88
-        :predicate (having :pairs (nb= 7) (same-family) (shifted-family 7 1))
-        :exclusions #{:full-flush
-                      :concealed-hand
-                      :single-wait
+   :seven-shifted-pairs
+   {:key :seven-shifted-pairs
+    :name "Seven shifted pairs"
+    :description "Hand is composed of seven pairs in the same suit, each shifted one up from the last."
+    :points 88
+    :predicate seven-shifted-pairs
+    :exclusions #{:full-flush
+                  :concealed-hand
+                  :single-wait
 
-                      ;; exclusion I added
-                      :pure-terminal-chows
-                      :seven-pairs}}
+                  ;; exclusion I added
+                  :pure-terminal-chows
+                  :seven-pairs}}
 
-   #_#_:thirteen-orphans
-       {:key :thirteen-orphans
-        :name "Thirteen orphans"
-        :description "Hand that consists of one of each terminal and honor tile"
-        :points 88
-        :predicate (every-pred
-                    (every-tiles :b1 :b9 :c1 :c9 :dg :dr :dw :s1 :s9 :we :wn :ws :ww)
-                    (only-tiles :b1 :b9 :c1 :c9 :dg :dr :dw :s1 :s9 :we :wn :ws :ww))
-        :exclusions #{:all-types :concealed-hand :single-wait}}
+   :thirteen-orphans
+   {:key :thirteen-orphans
+    :name "Thirteen orphans"
+    :description "Hand that consists of one of each terminal and honor tile"
+    :points 88
+    :predicate thirteen-orphans
+    :exclusions #{:all-types :concealed-hand :single-wait}}
 
-   #_#_:all-terminals
-       {:key :all-terminals
-        :name "All terminals"
-        :description "The pairs, pungs or kongs are all made up of 1 or 9 number tiles, without Honor Tiles."
-        :points 64
-        :predicate (only-tiles :b1 :b9 :c1 :c9 :s1 :s9)
-        :exclusions #{:all-pungs :outside-hand :pung-of-terminals-or-honors :no-honors}}
+   :all-terminals
+   {:key :all-terminals
+    :name "All terminals"
+    :description "The pairs, pungs or kongs are all made up of 1 or 9 number tiles, without Honor Tiles."
+    :points 64
+    :predicate all-terminals
+    :exclusions #{:all-pungs :outside-hand :pung-of-terminals-or-honors :no-honors}}
 
-   #_#_:little-four-winds
-       {:key :little-four-winds
-        :name "Little four winds"
-        :description "A hand that contains a pung/kong of three winds and a pair of the fourth."
-        :points 64
-        :predicate (every-pred
-                    (having :pairs (same-family=n \w 1))
-                    (having :pungs-or-kongs (same-family=n \w 3)))
-        :exclusions #{:big-three-winds :pung-of-terminals-or-honors}}
+   :little-four-winds
+   {:key :little-four-winds
+    :name "Little four winds"
+    :description "A hand that contains a pung/kong of three winds and a pair of the fourth."
+    :points 64
+    :predicate little-four-winds
+    :exclusions #{:big-three-winds :pung-of-terminals-or-honors}}
 
-   #_#_:little-three-dragons
-       {:key :little-three-dragons
-        :name "Little three dragons"
-        :description "A hand that contains a pung/kong of two dragons and a pair of the third."
-        :points 64
-        :predicate (every-pred
-                    (having :pairs (same-family=n \d 1))
-                    (having :pungs-or-kongs (same-family=n \d 2)))
-        :exclusions #{:dragon-pung :two-dragons}}
+   :little-three-dragons
+   {:key :little-three-dragons
+    :name "Little three dragons"
+    :description "A hand that contains a pung/kong of two dragons and a pair of the third."
+    :points 64
+    :predicate little-three-dragons
+    :exclusions #{:dragon-pung :two-dragons}}
 
-   #_#_:all-honors
-       {:key :all-honors
-        :name "All honors"
-        :description "The pairs, Pungs or Kongs are all made up of Honor Tiles."
-        :points 64
-        :predicate (only-tiles :we :ws :ww :wn :dr :dg :dw)
-        :exclusions #{:all-pungs :outside-hand :pung-of-terminals-or-honors}}
+   :all-honors
+   {:key :all-honors
+    :name "All honors"
+    :description "The pairs, Pungs or Kongs are all made up of Honor Tiles."
+    :points 64
+    :predicate all-honors
+    :exclusions #{:all-pungs :outside-hand :pung-of-terminals-or-honors}}
 
-   #_#_:four-concealed-pungs
-       {:key :four-concealed-pungs
-        :name "Four concealed pungs"
-        :description "Hand includes four Pungs achieved without melding"
-        :points 64
-        :predicate (having :concealed-pungs (nb= 4))
-        :exclusions #{:fully-concealed :self-drawn}}
+   :four-concealed-pungs
+   {:key :four-concealed-pungs
+    :name "Four concealed pungs"
+    :description "Hand includes four Pungs achieved without melding"
+    :points 64
+    :predicate four-concealed-pungs
+    :exclusions #{:fully-concealed :self-drawn}}
 
-   #_#_:pure-terminal-chows
-       {:key :pure-terminal-chows
-        :name "Pure terminal chows"
-        :description "Hand consists of two each of the lower and upper terminal Chows in one suit, with a pair of fivesin the same suit"
-        :points 64
-        :predicate (every-pred
-                    (having :chows
-                            (nb= 4)
-                            (same-family)
-                            (some-fn (at-least-one-of :b1 :b2 :b3 :b7 :b8 :b9)
-                                     (at-least-one-of :c1 :c2 :c3 :c7 :c8 :c9)
-                                     (at-least-one-of :s1 :s2 :s3 :s7 :s8 :s9)))
-                    (having :pairs (at-least-one-of :b5)))
-        :exclusions #{:seven-pairs
-                      :full-flush
-                      :all-chows
-                      :pure-double-chow
-                      :two-terminal-chows}}
+   :pure-terminal-chows
+   {:key :pure-terminal-chows
+    :name "Pure terminal chows"
+    :description "Hand consists of two each of the lower and upper terminal Chows in one suit, with a pair of fivesin the same suit"
+    :points 64
+    :predicate pure-terminal-chows
+    :exclusions #{:seven-pairs
+                  :full-flush
+                  :all-chows
+                  :pure-double-chow
+                  :two-terminal-chows}}
 
-   #_#_:quadruple-chow
-       {:key :quadruple-chow
-        :name "Quadruple chow"
-        :description "Four chows of the same numerical sequences in the same suit."
-        :points 48
-        :predicate (having :chows (nb= 4) (all-equals))
-        :exclusions #{:pure-shifted-pungs
-                      :tile-hog
-                      :pure-double-chow
+   :quadruple-chow
+   {:key :quadruple-chow
+    :name "Quadruple chow"
+    :description "Four chows of the same numerical sequences in the same suit."
+    :points 48
+    :predicate quadruple-chow
+    :exclusions #{:pure-shifted-pungs
+                  :tile-hog
+                  :pure-double-chow
 
-                      ;; exclusions I added
-                      :pure-triple-chow}}
+                  ;; exclusions I added
+                  :pure-triple-chow}}
 
-   #_#_:four-pure-shifted-pungs
-       {:key :quadruple-chow
-        :name "Four pure shifted pungs"
-        :description "Four Pungs or Kongs in the same suit, each shifted up one from the last."
-        :points 48
-        :predicate (having :pungs-or-kongs (nb= 4) (same-family) (shifted-family 1))
-        :exclusions #{:pure-triple-chow :all-pungs}}
+   :four-pure-shifted-pungs
+   {:key :four-pure-shifted-pungs
+    :name "Four pure shifted pungs"
+    :description "Four Pungs or Kongs in the same suit, each shifted up one from the last."
+    :points 48
+    :predicate four-pure-shifted-pungs
+    :exclusions #{:pure-triple-chow :all-pungs}}
 
-   #_#_:four-shifted-chows
-       {:key :four-shifted-chows
-        :name "Four shifted chows"
-        :description "Four chows in one suit, each shifted up 1 or 2 numbers from the last, but not a combination of both."
-        :points 32
-        :predicate (having :chows (nb= 4) (same-family) (some-fn (shifted-family 1)
-                                                                 (shifted-family 2)))
-        :exclusions #{:short-straight}}
+   :four-shifted-chows
+   {:key :four-shifted-chows
+    :name "Four shifted chows"
+    :description "Four chows in one suit, each shifted up 1 or 2 numbers from the last, but not a combination of both."
+    :points 32
+    :predicate four-shifted-chows
+    :exclusions #{:short-straight}}
 
-   #_#_:three-kongs
-       {:key :three-kongs
-        :name "Three kongs"
-        :description "Hand contains three Kongs"
-        :points 32
-        :predicate (having :kongs (nb= 3))
-        :exclusions #{}}
+   :three-kongs
+   {:key :three-kongs
+    :name "Three kongs"
+    :description "Hand contains three Kongs"
+    :points 32
+    :predicate three-kongs
+    :exclusions #{}}
 
-   #_#_:all-terminals-and-honors
-       {:key :all-terminals-and-honors
-        :name "All terminals and honors"
-        :description "The pair(s), Pungs or Kongs are all made up of 1 or 9 Number Tiles and Honor Tiles."
-        :points 32
-        :predicate (every-pred (having :pungs-or-kongs (nb= 4))
-                               (having :all-fans
-                                       (at-least-one-of :b1 :b9 :c1 :c9 :s1 :s9)
-                                       (at-least-one-of :dr :dg :dw :we :ws :ww :wn)))
-        :exclusions #{}}
+   :all-terminals-and-honors
+   {:key :all-terminals-and-honors
+    :name "All terminals and honors"
+    :description "The pair(s), Pungs or Kongs are all made up of 1 or 9 Number Tiles and Honor Tiles."
+    :points 32
+    :predicate all-terminals-and-honors
+    :exclusions #{}}
 
-   #_#_:seven-pairs
-       {:key :seven-pairs
-        :name "Seven pairs"
-        :description "Hand consisting of seven Pairs"
-        :points 24
-        :predicate (having :pairs (nb= 7))
-        :exclusions #{:concealed-hand
-                      :single-wait}}
+   :seven-pairs
+   {:key :seven-pairs
+    :name "Seven pairs"
+    :description "Hand consisting of seven Pairs"
+    :points 24
+    :predicate seven-pairs
+    :exclusions #{:concealed-hand
+                  :single-wait}}
 
-   #_#_:greater-honors-and-knitted-tiles
-       {:key :greater-honors-and-knitted-tiles
-        :name "Greater honors and knitted tiles"
-        :description "Formed by 7 single Honors (one of every Wind and Dragon), and singles of suit tiles belonging toseparate Knitted sequences (for example, 1-4-7 of Bamboos, 2-5-8 of Characters, and 3-6-9 of Stones)."
-        :points 24
-        :predicate (every-pred (having :knitted (nb= 1))
-                               (every-tiles :wn :we :ws :ww :dr :dg :dw))
-        :exclusions #{:concealed-hand
-                      :all-types
+   :greater-honors-and-knitted-tiles
+   {:key :greater-honors-and-knitted-tiles
+    :name "Greater honors and knitted tiles"
+    :description "Formed by 7 single Honors (one of every Wind and Dragon), and singles of suit tiles belonging toseparate Knitted sequences (for example, 1-4-7 of Bamboos, 2-5-8 of Characters, and 3-6-9 of Stones)."
+    :points 24
+    :predicate greater-honors-and-knitted-tiles
+    :exclusions #{:concealed-hand
+                  :all-types
 
-                      ;; i added
-                      :lesser-honors-and-knitted}}
+                  ;; i added
+                  :lesser-honors-and-knitted}}
 
-   #_#_:all-even-pungs
-       {:key :all-even-pungs
-        :name "All even pungs"
-        :description "A hand formed with Pungs of even-numbered suit tiles, and a pair of the same."
-        :points 24
-        :predicate (every-pred (having :pungs-or-kongs (nb= 4))
-                               (having :all-fans (suits) (even)))
-        :exclusions #{:all-pungs
-                      :all-simple}}
+   :all-even-pungs
+   {:key :all-even-pungs
+    :name "All even pungs"
+    :description "A hand formed with Pungs of even-numbered suit tiles, and a pair of the same."
+    :points 24
+    :predicate all-even-pungs
+    :exclusions #{:all-pungs
+                  :all-simple}}
 
-   #_#_:full-flush
-       {:key :full-flush
-        :name "Full flush"
-        :description "All the tiles are in the same suit."
-        :points 24
-        :predicate (having :all-fans (suits) (same-family))
-        :exclusions #{:no-honors}}
+   :full-flush
+   {:key :full-flush
+    :name "Full flush"
+    :description "All the tiles are in the same suit."
+    :points 24
+    :predicate full-flush
+    :exclusions #{:no-honors}}
 
-   #_#_:pure-triple-chow
-       {:key :pure-triple-chow
-        :name "Pure triple chows"
-        :description "Three chows of the same numerical sequence and in the same suit."
-        :points 24
-        :predicate (having :chows (all-equals 3))
-        :exclusions #{:no-honors
+   :pure-triple-chow
+   {:key :pure-triple-chow
+    :name "Pure triple chows"
+    :description "Three chows of the same numerical sequence and in the same suit."
+    :points 24
+    :predicate pure-triple-chow
+    :exclusions #{:no-honors
 
-                      ;; exclusions I added
-                      :pure-shifted-pungs}}
+                  ;; exclusions I added
+                  :pure-shifted-pungs}}
 
    #_#_:pure-shifted-pungs
        {:key :pure-shifted-pungs
