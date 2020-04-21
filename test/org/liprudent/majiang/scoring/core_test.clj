@@ -472,79 +472,107 @@
            :prevalent-wind :we
            :seat-wind :ws}))))
 
+(deftest score-upper-tiles-test
+  (is (= [[[:upper-tiles #{[[:pung :b7]
+                            [:kong :c8]
+                            [:chow :b7 :b8 :b9]
+                            [:chow :s7 :s8 :s9]
+                            [:pair :c9]]}]]]
+         (score
+          {:hand [:s7 :s8 :s9 :c9 :c9]
+           :fans [[:pung :b7]
+                  [:chow :b7 :b8 :b9]]
+           :concealed-kongs [[:kong :c8]]
+           :out [:s8 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
+(deftest score-middle-tiles-test
+  (is (= [[[:middle-tiles #{[[:pung :b4]
+                             [:kong :c5]
+                             [:chow :b4 :b5 :b6]
+                             [:chow :s4 :s5 :s6]
+                             [:pair :c6]]}]]]
+         (score
+          {:hand [:s4 :s5 :s6 :c6 :c6]
+           :fans [[:pung :b4]
+                  [:chow :b4 :b5 :b6]]
+           :concealed-kongs [[:kong :c5]]
+           :out [:s8 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
+(deftest score-lower-tiles-test
+  (is (= [[[:lower-tiles #{[[:pung :b2]
+                            [:kong :c2]
+                            [:chow :b1 :b2 :b3]
+                            [:chow :s1 :s2 :s3]
+                            [:pair :c3]]}]]]
+         (score
+          {:hand [:s1 :s2 :s3 :c3 :c3]
+           :fans [[:pung :b2]
+                  [:chow :b1 :b2 :b3]]
+           :concealed-kongs [[:kong :c2]]
+           :out [:s8 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
+(deftest score-pure-straight-test
+  (is (= [[[:pure-straight #{[[:chow :c1 :c2 :c3]
+                              [:chow :c4 :c5 :c6]
+                              [:chow :c7 :c8 :c9]]}]]]
+         (score
+          {:hand [:c4 :c5 :c6
+                  :c7 :c8 :c9
+                  :b1 :b2 :b3
+                  :c7 :c7]
+           :fans [[:chow :c1 :c2 :c3]]
+           :concealed-kongs []
+           :out [:c8 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
+(deftest score-three-suited-terminal-chows-test
+  (is (= [[[:three-suited-terminal-chows #{[[:chow :c1 :c2 :c3]
+                                            [:chow :c7 :c8 :c9]
+                                            [:chow :s1 :s2 :s3]
+                                            [:chow :s7 :s8 :s9]
+                                            [:pair :b5]]}]]]
+         (score
+          {:hand [:s1 :s2 :s3
+                  :s7 :s8 :s9
+                  :b5 :b5]
+           :fans [[:chow :c1 :c2 :c3]
+                  [:chow :c7 :c8 :c9]]
+           :concealed-kongs []
+           :out [:b5 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
+(deftest score-pure-shifted-chows-test
+  (is (= [[[:pure-shifted-chows #{[[:chow :c1 :c2 :c3]
+                                   [:chow :c3 :c4 :c5]
+                                   [:chow :c5 :c6 :c7]]}]]]
+         (score
+          {:hand [:s5 :s5
+                  :c1 :c2 :c3]
+           :fans [[:chow :c3 :c4 :c5]                                       ;; a shift by 2
+                  [:chow :c5 :c6 :c7]
+                  [:chow :s7 :s8 :s9]]
+           :concealed-kongs []
+           :out [:s5 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
+
 #_(deftest scoring-test
 
-    #_(is (= [[(:pure-shifted-pungs fans/fans)]]
-             (sut/scoring
-              {:hand [:dr :dr
-                      :s1 :s2 :s3]
-               :fans [[:pung :b4]
-                      [:kong :b5]]
-               :concealed-kongs [[:kong :b3]]
-               :out [:s1 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
 
-    #_(is (= [[(:upper-tiles fans/fans)]]
-             (sut/scoring
-              {:hand [:s7 :s8 :s9 :c9 :c9]
-               :fans [[:pung :b7]
-                      [:chow :b7 :b8 :b9]]
-               :concealed-kongs [[:kong :c8]]
-               :out [:s8 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
-
-    #_(is (= [[(:middle-tiles fans/fans)]]
-             (sut/scoring
-              {:hand [:s4 :s5 :s6 :c6 :c6]
-               :fans [[:pung :b4]
-                      [:chow :b4 :b5 :b6]]
-               :concealed-kongs [[:kong :c5]]
-               :out [:s8 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
-
-    #_(is (= [[(:lower-tiles fans/fans)]]
-             (sut/scoring
-              {:hand [:s1 :s2 :s3 :c3 :c3]
-               :fans [[:pung :b2]
-                      [:chow :b1 :b2 :b3]]
-               :concealed-kongs [[:kong :c2]]
-               :out [:s8 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
-
-    #_(is (= [[(:full-flush fans/fans)
-               (:pure-straight fans/fans)]]
-             (sut/scoring
-              {:hand [:c4 :c5 :c6
-                      :c7 :c8 :c9
-                      :c1 :c2 :c3
-                      :c7 :c7]
-               :fans [[:chow :c1 :c2 :c3]]
-               :concealed-kongs []
-               :out [:c8 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
-
-    #_(is (= [[(:three-suited-terminal-chows fans/fans)]]
-             (sut/scoring
-              {:hand [:s1 :s2 :s3
-                      :s7 :s8 :s9
-                      :b5 :b5]
-               :fans [[:chow :c1 :c2 :c3]
-                      [:chow :c7 :c8 :c9]]
-               :concealed-kongs []
-               :out [:b5 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
 
     #_(is (= [[(:pure-shifted-chows fans/fans)]]
              (sut/scoring

@@ -275,6 +275,27 @@
     #{all-fans}
     #{}))
 
+(defn upper-tiles
+  [{:keys [all-fans] :as game}]
+  (if ((only-tiles :b7 :b8 :b9
+                   :c7 :c8 :c9
+                   :s7 :s8 :s9) game)
+    #{all-fans}
+    #{}))
+
+(defn middle-tiles
+  [{:keys [all-fans] :as game}]
+  (if ((only-tiles :b4 :b5 :b6 :c4 :c5 :c6 :s4 :s5 :s6) game)
+    #{all-fans}
+    #{}))
+
+(defn lower-tiles
+  [{:keys [all-fans] :as game}]
+  (if ((only-tiles :b1 :b2 :b3 :c1 :c2 :c3 :s1 :s2 :s3) game)
+    #{all-fans}
+    #{}))
+
+
 (defn thirteen-orphans
   [{:keys [all-fans] :as game}]
   (if ((every-pred
@@ -365,6 +386,21 @@
     #{all-fans}
     #{}))
 
+(defn three-suited-terminal-chows
+  [{:keys [all-fans] :as game}]
+  (if ((having :all-fans
+               #{[[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
+                  [:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
+                  [:pair :s5]]
+                 [[:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
+                  [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
+                  [:pair :b5]]
+                 [[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
+                  [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
+                  [:pair :c5]]}) game)
+    #{all-fans}
+    #{}))
+
 (defn seven-pairs
   [{:keys [all-fans] :as game}]
   (if ((having :pairs (nb= 7)) game)
@@ -402,8 +438,9 @@
      (l/conso y xs ys)
      (predito pred ys))))
 
-(def shifto
-  (partial predito (fn [x y] (== (- (fan-order y) (fan-order x)) 1))))
+(defn shifto
+  [shift]
+  (partial predito (fn [x y] (== (- (fan-order y) (fan-order x)) shift))))
 
 (def same-familyo
   (partial predito (fn [x y] (= (fan-family x) (fan-family y)))))
@@ -415,6 +452,9 @@
   (partial predito (fn [x y]
                      (some? (and (#{:pung :kong} (fan-type x))
                                  (#{:pung :kong} (fan-type y)))))))
+(def chowo
+  (partial predito (fn [x y]
+                     (= :chow (fan-type x) (fan-type y)))))
 
 (defn combo
   "the combination is in same order as values"
@@ -446,11 +486,31 @@
                (combo all-fans fansl)
                (sizo fansl 3)
                (same-familyo fansl)
-               (shifto fansl)
+               ((shifto 1) fansl)
                (pungisho fansl))]
     (set fans)))
 
+(defn pure-straight
+  [{:keys [all-fans] :as _game}]
+  (let [fans (l/run* [fansl]
+               (combo all-fans fansl)
+               (sizo fansl 3)
+               (same-familyo fansl)
+               ((shifto 3) fansl)
+               (chowo fansl))]
+    (set fans)))
 
+(defn pure-shifted-chows
+  [{:keys [all-fans] :as _game}]
+  (let [fans (l/run* [fansl]
+               (combo all-fans fansl)
+               (sizo fansl 3)
+               (chowo fansl)
+               (same-familyo fansl)
+               (l/conde
+                [((shifto 1) fansl)]
+                [((shifto 2) fansl)]))]
+    (set fans)))
 
 (def fans
   {:big-four-winds
@@ -609,7 +669,11 @@
     :description "Four chows in one suit, each shifted up 1 or 2 numbers from the last, but not a combination of both."
     :points 32
     :predicate four-shifted-chows
-    :exclusions #{:short-straight}}
+    :exclusions #{:short-straight
+
+                  ;; I added
+                  :pure-shifted-chows
+                  }}
 
    :three-kongs
    {:key :three-kongs
@@ -684,72 +748,61 @@
     :predicate pure-shifted-pungs
     :exclusions #{:pure-triple-chow}}
 
-   #_#_:upper-tiles
-       {:key :upper-tiles
-        :name "Upper tiles"
-        :description "Hand consisting entirely of 7, 8, and 9 tiles."
-        :points 24
-        :predicate (only-tiles :b7 :b8 :b9
-                               :c7 :c8 :c9
-                               :s7 :s8 :s9)
-        :exclusions #{:no-honors
-                      ;; I added
-                      :upper-four}}
+   :upper-tiles
+   {:key :upper-tiles
+    :name "Upper tiles"
+    :description "Hand consisting entirely of 7, 8, and 9 tiles."
+    :points 24
+    :predicate upper-tiles
+    :exclusions #{:no-honors
+                  ;; I added
+                  :upper-four}}
 
-   #_#_:middle-tiles
-       {:key :middle-tiles
-        :name "Middle tiles"
-        :description "Hand consisting entirely of 4, 5 and 6 tiles."
-        :points 24
-        :predicate (only-tiles :b4 :b5 :b6 :c4 :c5 :c6 :s4 :s5 :s6)
-        :exclusions #{:no-honors
-                      :all-simple}}
+   :middle-tiles
+   {:key :middle-tiles
+    :name "Middle tiles"
+    :description "Hand consisting entirely of 4, 5 and 6 tiles."
+    :points 24
+    :predicate middle-tiles
+    :exclusions #{:no-honors
+                  :all-simple}}
 
-   #_#_:lower-tiles
-       {:key :lower-tiles
-        :name "Lower tiles"
-        :description "Hand consisting entirely of 1, 2 and 3 tiles."
-        :points 24
-        :predicate (only-tiles :b1 :b2 :b3 :c1 :c2 :c3 :s1 :s2 :s3)
-        :exclusions #{:no-honors
-                      ;; I added
-                      :lower-four}}
+   :lower-tiles
+   {:key :lower-tiles
+    :name "Lower tiles"
+    :description "Hand consisting entirely of 1, 2 and 3 tiles."
+    :points 24
+    :predicate lower-tiles
+    :exclusions #{:no-honors
+                  ;; I added
+                  :lower-four}}
 
-   #_#_:pure-straight
-       {:key :pure-straight
-        :name "Pure straight"
-        :description "Hand using one of every number, 1-9, in three consecutive chows, in the same suit."
-        :points 16
-        :predicate (having :chows (shifted-family 3 3))
-        :exclusions #{}}
+   :pure-straight
+   {:key :pure-straight
+    :name "Pure straight"
+    :description "Hand using one of every number, 1-9, in three consecutive chows, in the same suit."
+    :points 16
+    :predicate pure-straight
+    :exclusions #{}}
 
-   #_#_:three-suited-terminal-chows
-       {:key :three-suited-terminal-chows
-        :name "Three suited terminal chows"
-        :description "Hand consisting of 1-2-3 + 7-8-9 in one suit (Two Terminal Chows), 1-2-3 + 7-8-9 in another suit,a pair of fives in the third suit."
-        :points 16
-        :predicate (having :all-fans
-                           #{[[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
-                              [:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
-                              [:pair :s5]]
-                             [[:chow :c1 :c2 :c3] [:chow :c7 :c8 :c9]
-                              [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
-                              [:pair :b5]]
-                             [[:chow :b1 :b2 :b3] [:chow :b7 :b8 :b9]
-                              [:chow :s1 :s2 :s3] [:chow :s7 :s8 :s9]
-                              [:pair :c5]]})
-        :exclusions #{:pure-double-chow
-                      :two-terminal-chows
-                      :no-honors
-                      :all-chows}}
+   :three-suited-terminal-chows
+   {:key :three-suited-terminal-chows
+    :name "Three suited terminal chows"
+    :description "Hand consisting of 1-2-3 + 7-8-9 in one suit (Two Terminal Chows), 1-2-3 + 7-8-9 in another suit,a pair of fives in the third suit."
+    :points 16
+    :predicate three-suited-terminal-chows
+    :exclusions #{:pure-double-chow
+                  :two-terminal-chows
+                  :no-honors
+                  :all-chows}}
 
-   #_#_:pure-shifted-chows
-       {:key :pure-shifted-chows
-        :name "Pure shifted chows"
-        :description "Three chows in one suit, each shifted up either one or two numbers from the last, but not acombination of both."
-        :points 16
-        :predicate (having :chows (some-fn (shifted-family 3 1) (shifted-family 3 2)))
-        :exclusions #{}}
+   :pure-shifted-chows
+   {:key :pure-shifted-chows
+    :name "Pure shifted chows"
+    :description "Three chows in one suit, each shifted up either one or two numbers from the last, but not acombination of both."
+    :points 16
+    :predicate pure-shifted-chows
+    :exclusions #{}}
 
    #_#_:all-fives
        {:key :all-fives
