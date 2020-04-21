@@ -2,7 +2,8 @@
   (:require [clojure.set :as set]
             [org.liprudent.majiang.model :as m]
             [org.liprudent.majiang.scoring.sort :as sort]
-            [clojure.core.logic :as l]))
+            [clojure.core.logic :as l]
+            [clojure.core.logic.fd :as fd]))
 
 (defn only-tiles
   [& allowed-tiles]
@@ -380,11 +381,41 @@
     #{all-fans}
     #{}))
 
+(l/defne samo
+  [lvars]
+  ([[]])
+  ([[x]])
+  ([[x y . xs]]
+   (l/== x y)
+   (l/fresh [ys]
+     (l/conso y xs ys)
+     (samo ys))))
+
+(defn combo
+  "the combination is in same order as values"
+  [values xsl]
+  (cond (#{0} (count values))
+        (l/== xsl values)
+        :else
+        (l/conde
+         [(l/fresh [ysl]
+            (l/conso (first values) ysl xsl)
+            (combo (rest values) ysl))]
+         [(combo (rest values) xsl)])))
+
+(defn sizo
+  [xls size]
+  (l/pred xls #(= size (count %))))
+
 (defn pure-triple-chow
-  [{:keys [all-fans] :as game}]
-  (if ((having :chows (all-equals 3)) game)
-    #{all-fans}
-    #{}))
+  [{:keys [all-fans] :as _game}]
+  (let [fans (l/run* [fansl]
+               (combo all-fans fansl)
+               (sizo fansl 3)
+               (samo fansl))]
+    (set fans)))
+
+
 
 (def fans
   {:big-four-winds
@@ -606,13 +637,13 @@
                   ;; exclusions I added
                   :pure-shifted-pungs}}
 
-   #_#_:pure-shifted-pungs
-       {:key :pure-shifted-pungs
-        :name "Pure shifted pungs"
-        :description "Three Pungs or Kongs of the same suit, each shifted one up from the last."
-        :points 24
-        :predicate (having :pungs-or-kongs (shifted-family 3 1))
-        :exclusions #{:pure-triple-chow}}
+   :pure-shifted-pungs
+   {:key :pure-shifted-pungs
+    :name "Pure shifted pungs"
+    :description "Three Pungs or Kongs of the same suit, each shifted one up from the last."
+    :points 24
+    :predicate (having :pungs-or-kongs (shifted-family 3 1))
+    :exclusions #{:pure-triple-chow}}
 
    #_#_:upper-tiles
        {:key :upper-tiles

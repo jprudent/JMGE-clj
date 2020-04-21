@@ -436,11 +436,9 @@
            :seat-wind :ws}))))
 
 (deftest score-pure-triple-chow-test
-  (is (= [[[:full-flush #{[[:pung :b4]
-                           [:pung :b6]
-                           [:kong :b8]
-                           [:chow :b6 :b7 :b8]
-                           [:pair :b2]]}]]]
+  (is (= [[[:pure-triple-chow #{[[:chow :b1 :b2 :b3]
+                                 [:chow :b1 :b2 :b3]
+                                 [:chow :b1 :b2 :b3]]}]]]
          (score
           {:hand [:dr :dr
                   :s1 :s2 :s3]
