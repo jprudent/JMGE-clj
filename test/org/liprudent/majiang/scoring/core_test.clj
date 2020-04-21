@@ -92,12 +92,18 @@
            :seat-wind :ws}))))
 
 (deftest score-all-green-test
-  (is (= [[[:all-green #{[[:pung :b2]
+  (is (= [[[:pure-shifted-pungs #{[[:pung :b2]
+                                   [:pung :b3]
+                                   [:pung :b4]]}]
+           [:all-green #{[[:pung :b2]
                           [:pung :b3]
                           [:pung :b4]
                           [:pung :b8]
                           [:pair :dg]]}]]
-          [[:all-green #{[[:pung :b8]
+          [[:pure-triple-chow #{[[:chow :b2 :b3 :b4]
+                                 [:chow :b2 :b3 :b4]
+                                 [:chow :b2 :b3 :b4]]}]
+           [:all-green #{[[:pung :b8]
                           [:chow :b2 :b3 :b4]
                           [:chow :b2 :b3 :b4]
                           [:chow :b2 :b3 :b4]
@@ -451,20 +457,22 @@
            :prevalent-wind :we
            :seat-wind :ws}))))
 
-#_(deftest scoring-test
+(deftest score-pure-shifted-pungs-test
+  (is (= [[[:pure-shifted-pungs #{[[:kong :b3]
+                                   [:pung :b4]
+                                   [:kong :b5]]}]]]
+         (score
+          {:hand [:dr :dr
+                  :s1 :s2 :s3]
+           :fans [[:pung :b4]
+                  [:kong :b5]]
+           :concealed-kongs [[:kong :b3]]
+           :out [:s1 :self-drawn]
+           :wind :we
+           :prevalent-wind :we
+           :seat-wind :ws}))))
 
-    #_(is (= [[(:pure-triple-chow fans/fans)]]
-             (sut/scoring
-              {:hand [:dr :dr
-                      :s1 :s2 :s3]
-               :fans [[:chow :b1 :b2 :b3]
-                      [:chow :b1 :b2 :b3]
-                      [:chow :b1 :b2 :b3]]
-               :concealed-kongs []
-               :out [:s5 :self-drawn]
-               :wind :we
-               :prevalent-wind :we
-               :seat-wind :ws})))
+#_(deftest scoring-test
 
     #_(is (= [[(:pure-shifted-pungs fans/fans)]]
              (sut/scoring

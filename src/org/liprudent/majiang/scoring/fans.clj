@@ -219,6 +219,16 @@
   [[_ tile :as fan]]
   (m/family tile))
 
+(defn fan-order
+  "order of the first tile the fan belongs to"
+  [[_ tile :as fan]]
+  (m/order tile))
+
+(defn fan-type
+  "the type of the fan"
+  [fan]
+  (first fan))
+
 (defn ==familyo
   [fan1l fan2l]
   (l/project [fan1l fan2l]
@@ -381,15 +391,30 @@
     #{all-fans}
     #{}))
 
-(l/defne samo
-  [lvars]
-  ([[]])
-  ([[x]])
-  ([[x y . xs]]
-   (l/== x y)
+(l/defne predito
+  [pred lvars]
+  ([pred []])
+  ([pred [x]])
+  ([pred [x y . xs]]
+   (l/project [x y xs]
+     (l/== (pred x y) true))
    (l/fresh [ys]
      (l/conso y xs ys)
-     (samo ys))))
+     (predito pred ys))))
+
+(def shifto
+  (partial predito (fn [x y] (== (- (fan-order y) (fan-order x)) 1))))
+
+(def same-familyo
+  (partial predito (fn [x y] (= (fan-family x) (fan-family y)))))
+
+(def samo
+  (partial predito =))
+
+(def pungisho
+  (partial predito (fn [x y]
+                     (some? (and (#{:pung :kong} (fan-type x))
+                                 (#{:pung :kong} (fan-type y)))))))
 
 (defn combo
   "the combination is in same order as values"
@@ -413,6 +438,16 @@
                (combo all-fans fansl)
                (sizo fansl 3)
                (samo fansl))]
+    (set fans)))
+
+(defn pure-shifted-pungs
+  [{:keys [all-fans] :as _game}]
+  (let [fans (l/run* [fansl]
+               (combo all-fans fansl)
+               (sizo fansl 3)
+               (same-familyo fansl)
+               (shifto fansl)
+               (pungisho fansl))]
     (set fans)))
 
 
@@ -562,7 +597,11 @@
     :description "Four Pungs or Kongs in the same suit, each shifted up one from the last."
     :points 48
     :predicate four-pure-shifted-pungs
-    :exclusions #{:pure-triple-chow :all-pungs}}
+    :exclusions #{:pure-triple-chow
+                  :all-pungs
+
+                  ;; exclusions I added
+                  :pure-shifted-pungs}}
 
    :four-shifted-chows
    {:key :four-shifted-chows
@@ -642,7 +681,7 @@
     :name "Pure shifted pungs"
     :description "Three Pungs or Kongs of the same suit, each shifted one up from the last."
     :points 24
-    :predicate (having :pungs-or-kongs (shifted-family 3 1))
+    :predicate pure-shifted-pungs
     :exclusions #{:pure-triple-chow}}
 
    #_#_:upper-tiles
